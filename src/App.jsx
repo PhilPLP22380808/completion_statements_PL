@@ -674,8 +674,8 @@ export default function App() {
                       cursor: 'pointer',
                     }}
                   >
-                    <option value="buyer">Buyer (deduct)</option>
-                    <option value="seller">Seller (add)</option>
+                    <option value="buyer">Buyer (deduct from balance)</option>
+                    <option value="seller">Seller (add to balance)</option>
                   </select>
                 </div>
                 <button
