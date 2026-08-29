@@ -6,7 +6,7 @@
 import jsPDF from 'jspdf';
 import { firm } from '../theme';
 import { pinnacleMarkPng } from '../assets/logo';
-import { formatAmount, formatCurrency, formatLongDate, formatShortDate, formatMonthYear, parseMoney } from './format';
+import { formatAmount, formatCurrency, formatLongDate, formatShortDate, parseMoney, round2 } from './format';
 import { calculateApportionment } from './calc';
 import { chargeBalanceValue } from './statement';
 
@@ -15,6 +15,10 @@ const INK = [34, 34, 34];
 const GREY = [110, 110, 110];
 const FAINT = [150, 150, 150];
 const RULE = [214, 205, 205];
+const GREEN = [22, 163, 74];
+const RED = [220, 38, 38];
+const PANEL_FILL = [248, 245, 245];
+const BOX_FILL = [250, 250, 250];
 
 const M = { left: 20, right: 190, top: 22 };
 const COL = { pay: 143, rec: 190 }; // right edges of the two money columns
@@ -202,89 +206,148 @@ function footNote(statement, computed) {
 }
 
 // ---------------------------------------------------------------------------
-// Apportionment statement (standalone document)
+// Apportionment statement (original layout, current branding)
 // ---------------------------------------------------------------------------
 // `charges` is a normalised list: { name, category, periodStart, periodEnd,
 // totalCharge, accountBalance }  (accountBalance signed: + arrears, - credit).
-export function buildApportionmentStatementPDF(statement, charges, balanceLedger) {
+// opts: { allowances, purchasePrice } — supplied for the standalone calculator
+// to draw the allowances table and the Balance to Complete box; omitted for the
+// companion statement that sits alongside a completion statement.
+export function buildApportionmentStatementPDF(statement, charges, opts = {}) {
+  const { allowances = [], purchasePrice = '' } = opts;
+  const price = parseMoney(purchasePrice);
+  const showBalance = price > 0;
   const doc = newDoc();
-  let y = header(doc, { title: 'Apportionment Statement', statement });
+  const generated = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
 
+  // Header
+  try { doc.addImage(pinnacleMarkPng, 'PNG', M.left, M.top - 2, 12, 12); } catch (e) { /* noop */ }
+  text(doc, firm.name, M.left + 16, M.top + 4, { size: 16, color: BURGUNDY, style: 'bold' });
+  text(doc, 'Apportionment Statement', M.right, M.top + 2, { size: 13, color: INK, style: 'bold', align: 'right' });
+  text(doc, `Generated ${generated}`, M.right, M.top + 8, { size: 9, color: GREY, align: 'right' });
+  if (statement.status === 'Draft') text(doc, 'DRAFT', M.left + 16, M.top + 10, { size: 9, color: BURGUNDY, style: 'bold' });
+
+  let y = M.top + 15;
+  doc.setDrawColor(...BURGUNDY);
+  doc.setLineWidth(1);
+  doc.line(M.left, y, M.right, y);
+
+  // Property / matter box
+  y += 8;
+  const boxRows = [
+    statement.clients && ['CLIENT(S)', statement.clients],
+    ['PROPERTY', statement.address || 'Address not specified'],
+    statement.ourRef && ['OUR REF', statement.ourRef],
+    ['COMPLETION DATE', statement.completionDate ? formatLongDate(statement.completionDate) : 'TBC'],
+    showBalance && ['PURCHASE PRICE', formatCurrency(price)],
+  ].filter(Boolean);
+  const boxH = 6 + boxRows.length * 6;
+  doc.setFillColor(...PANEL_FILL);
+  doc.roundedRect(M.left, y, M.right - M.left, boxH, 2, 2, 'F');
+  let by = y + 7;
+  boxRows.forEach(([k, v]) => {
+    text(doc, k, M.left + 5, by, { size: 7.5, color: BURGUNDY, style: 'bold' });
+    text(doc, v, M.left + 42, by, { size: 9.5, color: INK });
+    by += 6;
+  });
+  y += boxH + 12;
+
+  // Allowances & adjustments table (standalone only)
+  const validAllowances = allowances.filter((a) => parseMoney(a.amount) !== 0);
+  if (showBalance && validAllowances.length > 0) {
+    text(doc, 'ALLOWANCES & ADJUSTMENTS', M.left, y, { size: 10, color: BURGUNDY, style: 'bold' });
+    y += 3;
+    rule(doc, y);
+    y += 7;
+    text(doc, 'Description', M.left, y, { size: 8, color: GREY });
+    text(doc, 'In favour of', M.left + 95, y, { size: 8, color: GREY });
+    text(doc, 'Amount', M.right, y, { size: 8, color: GREY, align: 'right' });
+    y += 2;
+    rule(doc, y, [235, 235, 235]);
+    y += 6;
+    validAllowances.forEach((a) => {
+      const amt = parseMoney(a.amount);
+      const buyer = a.inFavourOf === 'buyer';
+      text(doc, a.description || 'Allowance', M.left, y, { size: 9.5, color: INK });
+      text(doc, buyer ? 'Buyer' : 'Seller', M.left + 95, y, { size: 9.5, color: INK });
+      text(doc, `${buyer ? '-' : '+'}${formatCurrency(Math.abs(amt))}`, M.right, y, { size: 9.5, color: buyer ? RED : GREEN, align: 'right' });
+      y += 6.5;
+    });
+    y += 6;
+  }
+
+  // Apportionments
   const done = charges
     .map((c) => ({ charge: c, calc: calculateApportionment(c, statement.completionDate) }))
     .filter((r) => r.calc.complete);
 
-  if (done.length === 0) {
-    text(doc, 'No apportionments have been calculated yet.', M.left, y, { size: 10, color: GREY });
-    footer(doc, `Prepared ${formatLongDate(new Date().toISOString().slice(0, 10))}.`);
-    return doc;
-  }
+  text(doc, 'APPORTIONMENTS', M.left, y, { size: 10, color: BURGUNDY, style: 'bold' });
+  y += 3;
+  rule(doc, y);
+  y += 8;
 
-  text(
-    doc,
-    'Apportioned in accordance with the Standard Conditions of Sale (condition 6.3): the seller is treated as '
-      + 'owning the property up to and including the completion date, with the buyer liable from the following day.',
-    M.left, y, { size: 8.5, color: GREY, maxWidth: M.right - M.left }
-  );
-  y += 12;
+  if (done.length === 0) {
+    text(doc, 'No apportionments have been calculated.', M.left, y, { size: 9.5, color: GREY, style: 'italic' });
+    y += 10;
+  }
 
   done.forEach(({ charge, calc }) => {
-    y = pageBreakIfNeeded(doc, y, 46);
-    text(doc, charge.name || charge.category || 'Charge', M.left, y, { size: 10.5, color: BURGUNDY, style: 'bold' });
-    y += 6;
-
-    const rows = [
-      ['Billing period', `${formatShortDate(charge.periodStart)} to ${formatShortDate(charge.periodEnd)}  (${calc.daysInPeriod} days)`],
-      ['Total charge for the period', formatCurrency(parseMoney(charge.totalCharge))],
-      ['Daily rate', `${formatCurrency(calc.dailyRate)}  (charge / days in period)`],
-      ['Balance on the managing agent statement', `${formatCurrency(Math.abs(parseMoney(charge.accountBalance)))}  ${parseMoney(charge.accountBalance) < 0 ? 'in credit' : 'in arrears'}`],
-      ['Days apportioned to the buyer', `${calc.daysToApportion}  (day after completion to period end)`],
-      ["Buyer's share of the period", formatCurrency(calc.buyerShare)],
-    ];
-    rows.forEach(([k, v]) => {
-      text(doc, k, M.left + 4, y, { size: 9, color: GREY });
-      text(doc, v, M.left + 78, y, { size: 9, color: INK });
-      y += 5;
-    });
-
-    y += 1;
-    doc.setDrawColor(...RULE);
-    doc.setLineWidth(0.3);
-    doc.line(M.left + 4, y, M.right, y);
-    y += 5.5;
-    text(doc, `Apportionment payable to the ${calc.paidTo.toLowerCase()}`, M.left + 4, y, { size: 10, color: INK, style: 'bold' });
-    text(doc, formatCurrency(calc.amountToApportion), M.right, y, { size: 11, color: BURGUNDY, style: 'bold', align: 'right' });
-    y += 12;
+    if (y > 232) { doc.addPage(); y = M.top; }
+    doc.setFillColor(...BOX_FILL);
+    doc.roundedRect(M.left, y, M.right - M.left, 40, 2, 2, 'F');
+    let iy = y + 7;
+    text(doc, charge.name || charge.category || 'Charge', M.left + 5, iy, { size: 10, color: INK, style: 'bold' });
+    iy += 7;
+    text(doc, 'Billing period', M.left + 5, iy, { size: 8, color: GREY });
+    text(doc, `${formatShortDate(charge.periodStart)} to ${formatShortDate(charge.periodEnd)}  (${calc.daysInPeriod} days)`, M.left + 42, iy, { size: 8, color: INK });
+    iy += 5.5;
+    text(doc, 'Total charge', M.left + 5, iy, { size: 8, color: GREY });
+    text(doc, formatCurrency(parseMoney(charge.totalCharge)), M.left + 42, iy, { size: 8, color: INK });
+    text(doc, 'Daily rate', M.left + 95, iy, { size: 8, color: GREY });
+    text(doc, formatCurrency(calc.dailyRate), M.left + 118, iy, { size: 8, color: INK });
+    iy += 5.5;
+    const bal = parseMoney(charge.accountBalance);
+    text(doc, 'Balance on statement', M.left + 5, iy, { size: 8, color: GREY });
+    text(doc, `${formatCurrency(Math.abs(bal))}${bal < 0 ? ' (in credit)' : ''}`, M.left + 42, iy, { size: 8, color: INK });
+    text(doc, 'Days to apportion', M.left + 95, iy, { size: 8, color: GREY });
+    text(doc, `${calc.daysToApportion}`, M.left + 128, iy, { size: 8, color: INK });
+    iy += 6;
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.2);
+    doc.setLineDashPattern([1, 1], 0);
+    doc.line(M.left + 5, iy, M.right - 5, iy);
+    doc.setLineDashPattern([], 0);
+    iy += 5.5;
+    text(doc, `Apportionment payable to ${calc.paidTo}`, M.left + 5, iy, { size: 9, color: INK, style: 'bold' });
+    text(doc, `${calc.action === 'add' ? '+' : '-'}${formatCurrency(calc.amountToApportion)}`, M.right - 5, iy, { size: 10, color: calc.action === 'add' ? GREEN : RED, style: 'bold', align: 'right' });
+    y += 46;
   });
 
-  // Optional: how the apportionments feed the completion balance
-  if (balanceLedger && balanceLedger.length) {
-    y = pageBreakIfNeeded(doc, y, 10 + balanceLedger.length * 6);
-    rule(doc, y);
-    y += 6;
-    text(doc, 'EFFECT ON THE COMPLETION BALANCE', M.left, y, { size: 9, color: BURGUNDY, style: 'bold' });
-    y += 6;
-    balanceLedger.forEach(({ label, value }) => {
-      text(doc, label, M.left + 4, y, { size: 9.5, color: INK });
-      const display = value < 0 ? `(${formatAmount(-value)})` : formatAmount(value);
-      text(doc, display, M.right, y, { size: 9.5, color: INK, align: 'right' });
-      y += 5.4;
+  // Balance to complete (standalone only)
+  if (showBalance) {
+    let balance = price;
+    validAllowances.forEach((a) => {
+      const amt = parseMoney(a.amount);
+      balance += a.inFavourOf === 'buyer' ? -Math.abs(amt) : Math.abs(amt);
     });
-    const total = balanceLedger.reduce((t, l) => t + l.value, 0);
-    doc.line(M.left + 120, y - 3.5, M.right, y - 3.5);
-    text(doc, 'Balance to complete', M.left + 4, y, { size: 9.5, color: INK, style: 'bold' });
-    text(doc, formatCurrency(total), M.right, y, { size: 9.5, color: INK, style: 'bold', align: 'right' });
-    y += 8;
+    done.forEach(({ calc }) => { balance += calc.action === 'add' ? calc.amountToApportion : -calc.amountToApportion; });
+
+    if (y > 236) { doc.addPage(); y = M.top; }
+    y += 4;
+    doc.setFillColor(...BURGUNDY);
+    doc.roundedRect(M.left, y, M.right - M.left, 20, 2, 2, 'F');
+    text(doc, 'BALANCE TO COMPLETE', M.left + 8, y + 12, { size: 9, color: [255, 255, 255], style: 'bold' });
+    doc.setFontSize(16);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text(formatCurrency(round2(balance)), M.right - 8, y + 12.5, { align: 'right' });
+    y += 28;
   }
 
-  const singleEnd = done.length && done.every((r) => r.charge.periodEnd === done[0].charge.periodEnd)
-    ? done[0].charge.periodEnd : null;
-  const note = singleEnd
-    ? `Prepared ${formatLongDate(new Date().toISOString().slice(0, 10))}. Apportionments run to the end of ${formatMonthYear(singleEnd)}.`
-    : `Prepared ${formatLongDate(new Date().toISOString().slice(0, 10))}.`;
-  text(doc, 'Errors and Omissions Excepted', M.left, y, { size: 8.5, color: GREY, style: 'italic' });
+  text(doc, 'Errors and Omissions Excepted', M.left, y + 2, { size: 8.5, color: GREY, style: 'italic' });
+
   if (statement.status === 'Draft') draftWatermark(doc);
-  footer(doc, note);
+  footer(doc, `Prepared ${generated}.`);
   return doc;
 }
 
@@ -320,7 +383,7 @@ export function downloadLinkedSet(state, computed) {
 }
 
 // Apportionment-only mode: one document, the apportionment statement, with the
-// balance-to-complete summary if a purchase price was entered.
+// allowances table and Balance to Complete box when a purchase price is entered.
 export function downloadApportionmentOnly({ address, ourRef, completionDate, status = 'Draft', purchasePrice, allowances, apportionments }) {
   const statement = { clients: '', address, ourRef, completionDate, status };
   const charges = apportionments.map((a) => ({
@@ -332,19 +395,6 @@ export function downloadApportionmentOnly({ address, ourRef, completionDate, sta
     accountBalance: a.balanceOwed === '' ? '' : parseMoney(a.balanceOwed),
   }));
 
-  const price = parseMoney(purchasePrice);
-  let ledger = null;
-  if (price > 0) {
-    ledger = [{ label: 'Purchase price', value: price }];
-    (allowances || []).forEach((al) => {
-      const amt = parseMoney(al.amount);
-      if (amt) ledger.push({ label: al.description || `Allowance in favour of ${al.inFavourOf}`, value: al.inFavourOf === 'buyer' ? -amt : amt });
-    });
-    charges.forEach((c) => {
-      const calc = calculateApportionment(c, completionDate);
-      if (calc.complete) ledger.push({ label: `${c.name || 'Charge'} apportionment (to ${calc.paidTo})`, value: calc.action === 'add' ? calc.amountToApportion : -calc.amountToApportion });
-    });
-  }
-
-  buildApportionmentStatementPDF(statement, charges, ledger).save(fileStem(statement, 'Apportionment Statement'));
+  buildApportionmentStatementPDF(statement, charges, { allowances: allowances || [], purchasePrice })
+    .save(fileStem(statement, 'Apportionment Statement'));
 }
