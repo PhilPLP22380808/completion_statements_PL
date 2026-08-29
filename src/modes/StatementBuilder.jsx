@@ -5,15 +5,21 @@ import { TextInput, DateInput, Field, SectionCard } from '../components/fields';
 import StatementForm from '../components/StatementForm';
 import LedgerPreview from '../components/LedgerPreview';
 import Brand from '../components/Brand';
-import { newStatement, computeStatement } from '../lib/statement';
+import { newStatement, computeStatement, normalizeStatus } from '../lib/statement';
 import { downloadCompletionSet } from '../lib/pdf';
+import { addHistoryEntry } from '../lib/history';
+import { formatCurrency, formatShortDate } from '../lib/format';
 
 const STORAGE_KEY = (t) => `pinnacle.statement.${t}`;
 
 function loadState(matterType) {
   try {
     const saved = localStorage.getItem(STORAGE_KEY(matterType));
-    if (saved) return { ...newStatement(matterType), ...JSON.parse(saved), matterType };
+    if (saved) {
+      const merged = { ...newStatement(matterType), ...JSON.parse(saved), matterType };
+      merged.status = normalizeStatus(merged.status);
+      return merged;
+    }
   } catch (e) { /* ignore */ }
   return newStatement(matterType);
 }
@@ -28,6 +34,18 @@ export default function StatementBuilder({ matterType, onHome }) {
   const set = (patch) => setState((s) => ({ ...s, ...patch }));
   const computed = useMemo(() => computeStatement(state), [state]);
   const isPurchase = matterType === 'purchase';
+
+  const exportPdf = () => {
+    downloadCompletionSet(state, computed);
+    addHistoryEntry({
+      mode: matterType,
+      status: state.status,
+      state,
+      title: `${isPurchase ? 'Purchase' : 'Sale'}${state.address ? ` — ${state.address}` : ''}`,
+      subtitle: [state.clients, state.ourRef, state.completionDate && `completes ${formatShortDate(state.completionDate)}`].filter(Boolean).join(' · '),
+      balanceLabel: `${formatCurrency(computed.absTotal)} ${computed.direction === 'dueFromClient' ? 'due from you' : 'owed to you'}`,
+    });
+  };
 
   const resetAll = () => {
     if (window.confirm('Clear this statement and start again?')) {
@@ -45,7 +63,7 @@ export default function StatementBuilder({ matterType, onHome }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button onClick={onHome} style={btnGhost}><ArrowLeft size={16} /> Change task</button>
             <button onClick={resetAll} style={btnGhost}>Clear</button>
-            <button onClick={() => downloadCompletionSet(state, computed)} style={btnPrimary}><FileDown size={18} /> Export PDF</button>
+            <button onClick={exportPdf} style={btnPrimary}><FileDown size={18} /> Export PDF</button>
           </div>
         </div>
       </header>

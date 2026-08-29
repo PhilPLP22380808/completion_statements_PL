@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, FileDown, Calculator, Building2, CalendarDays, PoundSterling, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import ApportionmentPreview from '../components/ApportionmentPreview';
 import Brand from '../components/Brand';
 import { AllowanceDatalist, ALLOWANCE_LIST_ID } from '../components/fields';
 import { ALLOWANCE_DESCRIPTIONS } from '../lib/catalog';
 import { downloadApportionmentOnly } from '../lib/pdf';
+import { formatWithCommas, formatCurrency as fmtGBP, formatShortDate } from '../lib/format';
+import { addHistoryEntry, MODE_STORAGE_KEY } from '../lib/history';
 
 // Brand colors extracted from Pinnacle logo
 const colors = {
@@ -15,20 +17,25 @@ const colors = {
   blush: '#d4a5ab',
 };
 
-export default function ApportionmentOnly({ onHome }) {
-  const [propertyAddress, setPropertyAddress] = useState('');
-  const [completionDate, setCompletionDate] = useState('');
-  const [purchasePrice, setPurchasePrice] = useState('');
-  const [purchasePriceDisplay, setPurchasePriceDisplay] = useState('');
-  const [status, setStatus] = useState('Draft');
+const STORAGE_KEY = MODE_STORAGE_KEY.apportionment;
+const defaultAllowance = () => ({ id: Date.now(), description: '', amount: '', amountDisplay: '', inFavourOf: 'buyer' });
+const defaultCharge = () => ({ id: Date.now(), name: 'Service Charge', periodStart: '', periodEnd: '', totalCharge: '', totalChargeDisplay: '', balanceOwed: '', balanceOwedDisplay: '', expanded: true });
 
-  // Format number with commas
-  const formatWithCommas = (value) => {
-    const num = value.replace(/[^0-9.]/g, '');
-    const parts = num.split('.');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return parts.join('.');
-  };
+function loadAppState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* ignore */ }
+  return {};
+}
+
+export default function ApportionmentOnly({ onHome }) {
+  const saved = loadAppState();
+  const [propertyAddress, setPropertyAddress] = useState(saved.propertyAddress || '');
+  const [completionDate, setCompletionDate] = useState(saved.completionDate || '');
+  const [purchasePrice, setPurchasePrice] = useState(saved.purchasePrice || '');
+  const [purchasePriceDisplay, setPurchasePriceDisplay] = useState(formatWithCommas(saved.purchasePrice || ''));
+  const [status, setStatus] = useState(saved.status === 'Final' ? 'Final' : 'Draft');
 
   // Handle purchase price change
   const handlePurchasePriceChange = (e) => {
@@ -54,13 +61,20 @@ export default function ApportionmentOnly({ onHome }) {
     ));
   };
 
-  const [allowances, setAllowances] = useState([
-    { id: 1, description: '', amount: '', amountDisplay: '', inFavourOf: 'buyer' }
-  ]);
+  const [allowances, setAllowances] = useState(
+    Array.isArray(saved.allowances) && saved.allowances.length ? saved.allowances : [defaultAllowance()]
+  );
 
-  const [apportionments, setApportionments] = useState([
-    { id: 1, name: 'Service Charge', periodStart: '', periodEnd: '', totalCharge: '', totalChargeDisplay: '', balanceOwed: '', balanceOwedDisplay: '', expanded: true }
-  ]);
+  const [apportionments, setApportionments] = useState(
+    Array.isArray(saved.apportionments) && saved.apportionments.length ? saved.apportionments : [defaultCharge()]
+  );
+
+  // Autosave the working copy so History can reload it and a refresh doesn't lose it.
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ propertyAddress, completionDate, purchasePrice, status, allowances, apportionments }));
+    } catch (e) { /* ignore */ }
+  }, [propertyAddress, completionDate, purchasePrice, status, allowances, apportionments]);
 
   // Add new allowance
   const addAllowance = () => {
@@ -240,6 +254,17 @@ export default function ApportionmentOnly({ onHome }) {
       purchasePrice,
       allowances,
       apportionments,
+    });
+
+    const done = apportionments.filter(a => calculateApportionment(a).amountToApportion !== null).length;
+    const bal = calculateTotal();
+    addHistoryEntry({
+      mode: 'apportionment',
+      status,
+      state: { propertyAddress, completionDate, purchasePrice, status, allowances, apportionments },
+      title: `Apportionment${propertyAddress ? ` — ${propertyAddress}` : ''}`,
+      subtitle: completionDate ? `completes ${formatShortDate(completionDate)}` : '',
+      balanceLabel: bal !== null ? `${fmtGBP(bal)} to complete` : `${done} charge${done === 1 ? '' : 's'} apportioned`,
     });
   };
 

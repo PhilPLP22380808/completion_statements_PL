@@ -46,6 +46,9 @@ export function newStatement(matterType) {
   };
 }
 
+// Only Draft or Final are valid; coerce anything else (e.g. an old "Provisional").
+export const normalizeStatus = (s) => (s === 'Final' ? 'Final' : 'Draft');
+
 // A linked sale-and-purchase: shared client/date/status, plus a sale and a
 // purchase sub-statement. The net sale balance feeds the purchase automatically.
 export function newLinked() {

@@ -5,9 +5,10 @@ import { TextInput, DateInput, Field, SectionCard } from '../components/fields';
 import StatementForm from '../components/StatementForm';
 import LedgerPreview from '../components/LedgerPreview';
 import Brand from '../components/Brand';
-import { newLinked, computeLinked } from '../lib/statement';
+import { newLinked, computeLinked, normalizeStatus } from '../lib/statement';
 import { downloadLinkedSet } from '../lib/pdf';
-import { formatCurrency } from '../lib/format';
+import { addHistoryEntry } from '../lib/history';
+import { formatCurrency, formatShortDate } from '../lib/format';
 
 const STORAGE_KEY = 'pinnacle.statement.linked';
 
@@ -17,7 +18,9 @@ function loadState() {
     if (saved) {
       const base = newLinked();
       const parsed = JSON.parse(saved);
-      return { ...base, ...parsed, sale: { ...base.sale, ...parsed.sale }, purchase: { ...base.purchase, ...parsed.purchase } };
+      const merged = { ...base, ...parsed, sale: { ...base.sale, ...parsed.sale }, purchase: { ...base.purchase, ...parsed.purchase } };
+      merged.status = normalizeStatus(merged.status);
+      return merged;
     }
   } catch (e) { /* ignore */ }
   return newLinked();
@@ -47,6 +50,19 @@ export default function LinkedBuilder({ onHome }) {
   const salePreview = computed.saleStatement;
   const purchasePreview = computed.purchaseStatement;
 
+  const exportPdfs = () => {
+    downloadLinkedSet(state, computed);
+    const addr = state.purchase.address || state.sale.address;
+    addHistoryEntry({
+      mode: 'linked',
+      status: state.status,
+      state,
+      title: `Linked${addr ? ` — ${addr}` : ''}`,
+      subtitle: [state.clients, state.completionDate && `completes ${formatShortDate(state.completionDate)}`].filter(Boolean).join(' · '),
+      balanceLabel: `Sale ${formatCurrency(computed.sale.absTotal)} · Purchase ${formatCurrency(computed.purchase.absTotal)} ${computed.purchase.direction === 'dueFromClient' ? 'due' : 'owed'}`,
+    });
+  };
+
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #faf8f8 0%, #f5f0f1 100%)', fontFamily: "'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
       <header style={{ background: 'white', borderBottom: `3px solid ${colors.burgundy}`, padding: '16px 24px', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 8px rgba(114,47,55,0.08)' }}>
@@ -55,7 +71,7 @@ export default function LinkedBuilder({ onHome }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button onClick={onHome} style={btnGhost}><ArrowLeft size={16} /> Change task</button>
             <button onClick={resetAll} style={btnGhost}>Clear</button>
-            <button onClick={() => downloadLinkedSet(state, computed)} style={btnPrimary}><FileDown size={18} /> Export PDFs</button>
+            <button onClick={exportPdfs} style={btnPrimary}><FileDown size={18} /> Export PDFs</button>
           </div>
         </div>
       </header>
