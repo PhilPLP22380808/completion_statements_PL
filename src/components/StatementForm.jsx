@@ -1,7 +1,7 @@
 import React from 'react';
 import { PoundSterling, Receipt, Wallet, CalendarDays, Scale, Building2 } from 'lucide-react';
 import { colors, inputStyle } from '../theme';
-import { TextInput, MoneyInput, Checkbox, DeleteButton, AddButton, QuickAdd, Field, SectionCard, AllowanceDatalist, ALLOWANCE_LIST_ID } from './fields';
+import { TextInput, MoneyInput, Checkbox, DeleteButton, AddButton, Field, SectionCard, Datalist } from './fields';
 import ChargesEditor from './ChargesEditor';
 import { newLine } from '../lib/statement';
 import { purchaseFees, purchaseCostItems, purchaseFunds, saleFees, saleCostItems, saleReceipts, ALLOWANCE_DESCRIPTIONS } from '../lib/catalog';
@@ -9,6 +9,10 @@ import { purchaseFees, purchaseCostItems, purchaseFunds, saleFees, saleCostItems
 // All the money sections for one statement. `state` is a statement object,
 // `onChange(patch)` merges a partial update. `completionDate` is passed in so a
 // linked deal can share one date across both sides.
+//
+// Every list section works the same way: an "Add" button in the header adds an
+// empty row; each row has a free-text description (with a suggestions list),
+// an amount, an optional +VAT toggle, and a delete button.
 export default function StatementForm({ state, onChange, completionDate }) {
   const isPurchase = state.matterType === 'purchase';
   const feesCatalog = isPurchase ? purchaseFees : saleFees;
@@ -18,8 +22,8 @@ export default function StatementForm({ state, onChange, completionDate }) {
 
   const editList = (key) => ({
     add: (item) => set({ [key]: [...(state[key] || []), newLine(item)] }),
-    update: (id, patch) => set({ [key]: state[key].map((l) => (l.id === id ? { ...l, ...patch } : l)) }),
-    remove: (id) => set({ [key]: state[key].filter((l) => l.id !== id) }),
+    update: (id, patch) => set({ [key]: (state[key] || []).map((l) => (l.id === id ? { ...l, ...patch } : l)) }),
+    remove: (id) => set({ [key]: (state[key] || []).filter((l) => l.id !== id) }),
   });
   const costs = editList('costs');
   const otherCosts = editList('otherCosts');
@@ -42,36 +46,47 @@ export default function StatementForm({ state, onChange, completionDate }) {
         </div>
       </SectionCard>
 
-      <SectionCard icon={Receipt} title="Fees and disbursements">
-        <LineList lines={state.costs} onUpdate={costs.update} onRemove={costs.remove} showVat />
-        <div style={{ marginTop: 10 }}>
-          <QuickAdd catalog={feesCatalog} existingLabels={state.costs.map((l) => l.label)} onAdd={costs.add} placeholder="Add a fee or disbursement..." />
-        </div>
-      </SectionCard>
+      <ItemSection
+        icon={Receipt}
+        title="Fees and disbursements"
+        listId="fees-list"
+        lines={state.costs || []}
+        list={costs}
+        catalog={feesCatalog}
+        showVat
+        defaultVat
+        emptyHint="Our legal fee and the disbursements we incur (searches, bank transfer, Land Registry office copies)."
+      />
 
-      <SectionCard icon={Building2} title="Costs">
-        {(state.otherCosts || []).length === 0 && <div style={{ color: colors.faint, fontSize: 13, fontStyle: 'italic' }}>{costsHint}</div>}
-        <LineList lines={state.otherCosts || []} onUpdate={otherCosts.update} onRemove={otherCosts.remove} showVat />
-        <div style={{ marginTop: 10 }}>
-          <QuickAdd catalog={costsCatalog} existingLabels={(state.otherCosts || []).map((l) => l.label)} onAdd={otherCosts.add} placeholder="Add a cost..." />
-        </div>
-      </SectionCard>
+      <ItemSection
+        icon={Building2}
+        title="Costs"
+        listId="costs-list"
+        lines={state.otherCosts || []}
+        list={otherCosts}
+        catalog={costsCatalog}
+        showVat
+        emptyHint={costsHint}
+      />
 
-      <SectionCard icon={Wallet} title="Receipts">
-        <LineList lines={state.funds} onUpdate={funds.update} onRemove={funds.remove} showVat={false} />
-        <div style={{ marginTop: 10 }}>
-          <QuickAdd catalog={fundsCatalog} existingLabels={state.funds.map((l) => l.label)} onAdd={funds.add} placeholder="Add a receipt..." />
-        </div>
-      </SectionCard>
+      <ItemSection
+        icon={Wallet}
+        title="Receipts"
+        listId="receipts-list"
+        lines={state.funds || []}
+        list={funds}
+        catalog={fundsCatalog}
+        emptyHint="Deposit, mortgage advance, payment on account, funds from a linked sale."
+      />
 
       <SectionCard icon={Scale} title="Allowances & adjustments" action={<AddButton onClick={addAllowance}>Add</AddButton>}>
-        {state.allowances.length === 0 && <div style={{ color: colors.faint, fontSize: 13, fontStyle: 'italic' }}>None. Add credits, retentions, indemnity contributions, etc.</div>}
-        <AllowanceDatalist options={ALLOWANCE_DESCRIPTIONS} />
+        {state.allowances.length === 0 && <div style={hintStyle}>None. Add credits, indemnity contributions, contributions to costs, etc.</div>}
+        <Datalist id="allowance-descriptions" options={ALLOWANCE_DESCRIPTIONS} />
         <div style={{ display: 'grid', gap: 10 }}>
           {state.allowances.map((a) => (
-            <div key={a.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.4fr auto', gap: 10, alignItems: 'end', padding: 12, background: colors.panel, borderRadius: 10 }}>
-              <Field label="Description"><TextInput list={ALLOWANCE_LIST_ID} value={a.description} onChange={(e) => updAllowance(a.id, { description: e.target.value })} placeholder="e.g. Service charge credit" style={{ textAlign: 'left' }} /></Field>
-              <Field label="Amount (£)"><MoneyInput value={a.amount} onChange={(v) => updAllowance(a.id, { amount: v })} /></Field>
+            <div key={a.id} style={rowStyle('2fr 1fr 1.4fr auto')}>
+              <Field label="Description"><TextInput list="allowance-descriptions" value={a.description} onChange={(e) => updAllowance(a.id, { description: e.target.value })} placeholder="e.g. Service charge credit" style={{ textAlign: 'left', background: 'white' }} /></Field>
+              <Field label="Amount (£)"><MoneyInput value={a.amount} onChange={(v) => updAllowance(a.id, { amount: v })} style={{ background: 'white' }} /></Field>
               <Field label="In favour of">
                 <select value={a.inFavourOf} onChange={(e) => updAllowance(a.id, { inFavourOf: e.target.value })} style={{ ...inputStyle, cursor: 'pointer' }}>
                   <option value="buyer">Buyer</option>
@@ -93,7 +108,7 @@ export default function StatementForm({ state, onChange, completionDate }) {
             <Note>A separate apportionment statement is produced alongside the completion statement.</Note>
           </>
         ) : (
-          <div style={{ color: colors.faint, fontSize: 13, fontStyle: 'italic' }}>
+          <div style={hintStyle}>
             Tick "Include apportionments" if there are service charge, ground rent or other periodic charges to split with the other side.
           </div>
         )}
@@ -102,21 +117,49 @@ export default function StatementForm({ state, onChange, completionDate }) {
   );
 }
 
-export function LineList({ lines, onUpdate, onRemove, showVat }) {
-  if (lines.length === 0) return null;
+// One list section: header Add button, empty hint, and description / amount /
+// (+VAT) / delete rows. Picking a known label from the suggestions list applies
+// that item's usual VAT treatment; it can still be toggled per line.
+function ItemSection({ icon, title, listId, lines, list, catalog, showVat = false, defaultVat = false, emptyHint }) {
+  const options = catalog.map((c) => c.label);
+  const cols = showVat ? '2fr 1fr auto auto' : '2fr 1fr auto';
+
+  const onLabelChange = (id, label) => {
+    const match = catalog.find((c) => c.label === label);
+    list.update(id, match ? { label, vatable: !!match.vatable } : { label });
+  };
+
   return (
-    <div style={{ display: 'grid', gap: 8 }}>
-      {lines.map((l) => (
-        <div key={l.id} style={{ display: 'grid', gridTemplateColumns: showVat ? '1fr 150px 90px auto' : '1fr 150px auto', gap: 10, alignItems: 'center', padding: '8px 12px', background: colors.panel, borderRadius: 10 }}>
-          <TextInput value={l.label} onChange={(e) => onUpdate(l.id, { label: e.target.value })} placeholder="Description" style={{ textAlign: 'left', background: 'white' }} />
-          <MoneyInput value={l.amount} onChange={(v) => onUpdate(l.id, { amount: v })} style={{ background: 'white' }} />
-          {showVat && <Checkbox checked={l.vatable} onChange={(v) => onUpdate(l.id, { vatable: v })} label="+VAT" />}
-          <DeleteButton onClick={() => onRemove(l.id)} />
-        </div>
-      ))}
-    </div>
+    <SectionCard icon={icon} title={title} action={<AddButton onClick={() => list.add(showVat ? { vatable: defaultVat } : {})}>Add</AddButton>}>
+      {lines.length === 0 && <div style={hintStyle}>{emptyHint}</div>}
+      <Datalist id={listId} options={options} />
+      <div style={{ display: 'grid', gap: 10 }}>
+        {lines.map((l) => (
+          <div key={l.id} style={rowStyle(cols)}>
+            <Field label="Description">
+              <TextInput list={listId} value={l.label} onChange={(e) => onLabelChange(l.id, e.target.value)} placeholder="Description" style={{ textAlign: 'left', background: 'white' }} />
+            </Field>
+            <Field label="Amount (£)">
+              <MoneyInput value={l.amount} onChange={(v) => list.update(l.id, { amount: v })} style={{ background: 'white' }} />
+            </Field>
+            {showVat && (
+              <div style={{ paddingBottom: 9 }}>
+                <Checkbox checked={l.vatable} onChange={(v) => list.update(l.id, { vatable: v })} label="+VAT" />
+              </div>
+            )}
+            <DeleteButton onClick={() => list.remove(l.id)} />
+          </div>
+        ))}
+      </div>
+    </SectionCard>
   );
 }
+
+const hintStyle = { color: colors.faint, fontSize: 13, fontStyle: 'italic' };
+const rowStyle = (cols) => ({
+  display: 'grid', gridTemplateColumns: cols, gap: 10, alignItems: 'end',
+  padding: 12, background: colors.panel, borderRadius: 10,
+});
 
 export function Note({ children }) {
   return <div style={{ marginTop: 12, fontSize: 12.5, color: colors.muted, background: colors.panel, borderRadius: 8, padding: '8px 12px' }}>{children}</div>;

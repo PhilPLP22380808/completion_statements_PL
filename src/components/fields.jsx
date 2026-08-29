@@ -119,16 +119,20 @@ export function QuickAdd({ catalog, existingLabels = [], onAdd, placeholder = 'A
   );
 }
 
-// A shared <datalist> for the allowance description fields. Render once per
-// screen; description inputs reference it with list="allowance-descriptions".
-export const ALLOWANCE_LIST_ID = 'allowance-descriptions';
-
-export function AllowanceDatalist({ options }) {
+// A <datalist> of suggestions for a free-text field. Render once per screen and
+// point inputs at it with list={id}. Typing stays free; the list is a shortcut.
+export function Datalist({ id, options }) {
   return (
-    <datalist id={ALLOWANCE_LIST_ID}>
+    <datalist id={id}>
       {options.map((o) => <option key={o} value={o} />)}
     </datalist>
   );
+}
+
+// Back-compat wrapper for the allowance description field.
+export const ALLOWANCE_LIST_ID = 'allowance-descriptions';
+export function AllowanceDatalist({ options }) {
+  return <Datalist id={ALLOWANCE_LIST_ID} options={options} />;
 }
 
 export function SectionCard({ icon: Icon, title, action, children }) {
