@@ -79,3 +79,22 @@ export const saleReceipts = [
 ];
 
 export const APPORTIONMENT_CATEGORIES = ['Service Charge', 'Ground Rent', 'Rent', 'Other'];
+
+// Common descriptions for the Allowances & adjustments rows. Offered as a
+// type-ahead list; the field stays free text.
+export const ALLOWANCE_DESCRIPTIONS = [
+  'Allowance for indemnity policy',
+  'Fixtures and fittings',
+  'Allowance for works',
+  'Retention',
+  'Service charge retention',
+  'Service charge credit',
+  'Allowance for outstanding / snagging works',
+  'Allowance for repairs',
+  "Seller's contribution to buyer's costs",
+  'Allowance for unpaid invoices',
+  'Damaged or missing items',
+  'Allowance for white goods or appliances',
+  'Rent / tenancy deposit',
+  'Compensation for late completion',
+];

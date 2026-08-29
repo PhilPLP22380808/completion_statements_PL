@@ -1,10 +1,10 @@
 import React from 'react';
 import { PoundSterling, Receipt, Wallet, CalendarDays, Scale } from 'lucide-react';
 import { colors, inputStyle, labelStyle } from '../theme';
-import { TextInput, MoneyInput, Checkbox, DeleteButton, AddButton, QuickAdd, Field, SectionCard } from './fields';
+import { TextInput, MoneyInput, Checkbox, DeleteButton, AddButton, QuickAdd, Field, SectionCard, AllowanceDatalist, ALLOWANCE_LIST_ID } from './fields';
 import ChargesEditor from './ChargesEditor';
 import { newLine } from '../lib/statement';
-import { purchasePriceAdditions, purchaseCosts, purchaseFunds, saleCosts, saleReceipts } from '../lib/catalog';
+import { purchasePriceAdditions, purchaseCosts, purchaseFunds, saleCosts, saleReceipts, ALLOWANCE_DESCRIPTIONS } from '../lib/catalog';
 
 // All the money sections for one statement. `state` is a statement object,
 // `onChange(patch)` merges a partial update. `completionDate` is passed in so a
@@ -63,10 +63,11 @@ export default function StatementForm({ state, onChange, completionDate }) {
 
       <SectionCard icon={Scale} title="Allowances & adjustments" action={<AddButton onClick={addAllowance}>Add</AddButton>}>
         {state.allowances.length === 0 && <div style={{ color: colors.faint, fontSize: 13, fontStyle: 'italic' }}>None. Add credits, retentions, indemnity contributions, etc.</div>}
+        <AllowanceDatalist options={ALLOWANCE_DESCRIPTIONS} />
         <div style={{ display: 'grid', gap: 10 }}>
           {state.allowances.map((a) => (
             <div key={a.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.4fr auto', gap: 10, alignItems: 'end', padding: 12, background: colors.panel, borderRadius: 10 }}>
-              <Field label="Description"><TextInput value={a.description} onChange={(e) => updAllowance(a.id, { description: e.target.value })} placeholder="e.g. Service charge credit" style={{ textAlign: 'left' }} /></Field>
+              <Field label="Description"><TextInput list={ALLOWANCE_LIST_ID} value={a.description} onChange={(e) => updAllowance(a.id, { description: e.target.value })} placeholder="e.g. Service charge credit" style={{ textAlign: 'left' }} /></Field>
               <Field label="Amount (£)"><MoneyInput value={a.amount} onChange={(v) => updAllowance(a.id, { amount: v })} /></Field>
               <Field label="In favour of">
                 <select value={a.inFavourOf} onChange={(e) => updAllowance(a.id, { inFavourOf: e.target.value })} style={{ ...inputStyle, cursor: 'pointer' }}>

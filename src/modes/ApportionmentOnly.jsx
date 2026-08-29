@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Plus, Trash2, FileDown, Calculator, Building2, CalendarDays, PoundSterling, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import ApportionmentPreview from '../components/ApportionmentPreview';
 import Brand from '../components/Brand';
+import { AllowanceDatalist, ALLOWANCE_LIST_ID } from '../components/fields';
+import { ALLOWANCE_DESCRIPTIONS } from '../lib/catalog';
 import { downloadApportionmentOnly } from '../lib/pdf';
 
 // Brand colors extracted from Pinnacle logo
@@ -433,6 +435,7 @@ export default function ApportionmentOnly({ onHome }) {
             </button>
           </div>
 
+          <AllowanceDatalist options={ALLOWANCE_DESCRIPTIONS} />
           <div style={{ display: 'grid', gap: 12 }}>
             {allowances.map((allowance) => (
               <div key={allowance.id} style={{
@@ -448,6 +451,7 @@ export default function ApportionmentOnly({ onHome }) {
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#888', marginBottom: 4 }}>Description</label>
                   <input
                     type="text"
+                    list={ALLOWANCE_LIST_ID}
                     value={allowance.description}
                     onChange={e => updateAllowance(allowance.id, 'description', e.target.value)}
                     placeholder="e.g. Retention, Fixtures"

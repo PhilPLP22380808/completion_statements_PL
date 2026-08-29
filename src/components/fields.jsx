@@ -119,6 +119,18 @@ export function QuickAdd({ catalog, existingLabels = [], onAdd, placeholder = 'A
   );
 }
 
+// A shared <datalist> for the allowance description fields. Render once per
+// screen; description inputs reference it with list="allowance-descriptions".
+export const ALLOWANCE_LIST_ID = 'allowance-descriptions';
+
+export function AllowanceDatalist({ options }) {
+  return (
+    <datalist id={ALLOWANCE_LIST_ID}>
+      {options.map((o) => <option key={o} value={o} />)}
+    </datalist>
+  );
+}
+
 export function SectionCard({ icon: Icon, title, action, children }) {
   return (
     <section style={{
