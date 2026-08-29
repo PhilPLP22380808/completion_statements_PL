@@ -9,6 +9,7 @@ import {
 import ChargesEditor from '../components/ChargesEditor';
 import LedgerPreview from '../components/LedgerPreview';
 import { newStatement, newLine, computeStatement } from '../lib/statement';
+import { downloadCompletionSet } from '../lib/pdf';
 import {
   purchasePriceAdditions, purchaseCosts, purchaseFunds, saleCosts, saleReceipts,
 } from '../lib/catalog';
@@ -72,7 +73,7 @@ export default function StatementBuilder({ matterType, onHome }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button onClick={onHome} style={btnGhost}><ArrowLeft size={16} /> Change task</button>
             <button onClick={resetAll} style={btnGhost}>Clear</button>
-            <button onClick={() => alert('PDF export is being built next.')} style={btnPrimary}><FileDown size={18} /> Export</button>
+            <button onClick={() => downloadCompletionSet(state, computed)} style={btnPrimary}><FileDown size={18} /> Export PDF</button>
           </div>
         </div>
       </header>

@@ -34,7 +34,7 @@ export default function LedgerPreview({ computed, statement }) {
             </div>
           ))}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px', gap: 4, padding: '4px 0', borderTop: `1px solid ${colors.line}`, marginTop: 4, fontWeight: 600 }}>
-            <span>Subtotal: {s.title}</span>
+            <span>{s.title} subtotal</span>
             <span style={{ textAlign: 'right' }}>{formatAmount(s.subtotal)}</span>
           </div>
         </div>

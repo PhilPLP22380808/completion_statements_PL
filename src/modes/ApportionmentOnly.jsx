@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, FileDown, Calculator, Building2, CalendarDays, PoundSterling, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
-import jsPDF from 'jspdf';
 import ApportionmentPreview from '../components/ApportionmentPreview';
+import { downloadApportionmentOnly } from '../lib/pdf';
 
 // Brand colors extracted from Pinnacle logo
 const colors = {
@@ -226,199 +226,20 @@ export default function ApportionmentOnly({ onHome }) {
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  // Generate and download PDF
+  // Generate and download the apportionment statement PDF
   const generatePDF = () => {
-    const total = calculateTotal();
-    const doc = new jsPDF();
-
-    // Colors
-    const burgundy = [114, 47, 55];
-    const darkGray = [51, 51, 51];
-    const mediumGray = [102, 102, 102];
-    const lightGray = [150, 150, 150];
-    const green = [22, 163, 74];
-    const red = [220, 38, 38];
-
-    let y = 20;
-    const leftMargin = 20;
-    const pageWidth = 210;
-    const contentWidth = pageWidth - 40;
-
-    // Helper functions
-    const addText = (text, x, yPos, options = {}) => {
-      const { size = 10, color = darkGray, style = 'normal', align = 'left' } = options;
-      doc.setFontSize(size);
-      doc.setTextColor(...color);
-      doc.setFont('helvetica', style);
-      if (align === 'right') {
-        doc.text(text, pageWidth - 20, yPos, { align: 'right' });
-      } else {
-        doc.text(text, x, yPos);
-      }
-    };
-
-    const addLine = (y1, color = [229, 224, 224]) => {
-      doc.setDrawColor(...color);
-      doc.setLineWidth(0.5);
-      doc.line(leftMargin, y1, pageWidth - 20, y1);
-    };
-
-    // Header
-    addText('Pinnacle Property Lawyers', leftMargin, y, { size: 18, color: burgundy, style: 'bold' });
-    y += 6;
-    addText('Professional Legal Services', leftMargin, y, { size: 9, color: mediumGray });
-
-    // Document title (right aligned)
-    addText('Completion Statement', 0, 20, { size: 14, style: 'bold', align: 'right' });
-    addText(`Generated ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}`, 0, 26, { size: 9, color: mediumGray, align: 'right' });
-
-    y += 10;
-    doc.setDrawColor(...burgundy);
-    doc.setLineWidth(1);
-    doc.line(leftMargin, y, pageWidth - 20, y);
-
-    // Property Details Box
-    y += 10;
-    doc.setFillColor(248, 245, 245);
-    doc.roundedRect(leftMargin, y, contentWidth, 28, 2, 2, 'F');
-
-    y += 8;
-    addText('PROPERTY', leftMargin + 5, y, { size: 8, color: burgundy, style: 'bold' });
-    y += 6;
-    addText(propertyAddress || 'Address not specified', leftMargin + 5, y, { size: 11, style: 'bold' });
-    y += 8;
-    addText(`Completion Date: ${formatDate(completionDate)}`, leftMargin + 5, y, { size: 9, color: mediumGray });
-    addText(`Purchase Price: ${formatCurrency(parseFloat(purchasePrice))}`, leftMargin + 85, y, { size: 9, color: mediumGray });
-
-    // Purchase Price Section
-    y += 18;
-    addText('Purchase Price', leftMargin, y, { size: 11, color: burgundy, style: 'bold' });
-    y += 3;
-    addLine(y);
-    y += 8;
-    addText('Gross Purchase Price', leftMargin, y, { size: 10 });
-    addText(formatCurrency(parseFloat(purchasePrice)), 0, y, { size: 10, align: 'right' });
-
-    // Allowances Section
-    const validAllowances = allowances.filter(a => a.amount && parseFloat(a.amount) > 0);
-    if (validAllowances.length > 0) {
-      y += 14;
-      addText('Allowances & Adjustments', leftMargin, y, { size: 11, color: burgundy, style: 'bold' });
-      y += 3;
-      addLine(y);
-      y += 8;
-
-      // Table header
-      addText('Description', leftMargin, y, { size: 9, color: mediumGray });
-      addText('In Favour Of', leftMargin + 80, y, { size: 9, color: mediumGray });
-      addText('Amount', 0, y, { size: 9, color: mediumGray, align: 'right' });
-      y += 2;
-      addLine(y, [240, 240, 240]);
-      y += 6;
-
-      validAllowances.forEach(a => {
-        addText(a.description || 'Allowance', leftMargin, y, { size: 10 });
-        addText(a.inFavourOf === 'buyer' ? 'Buyer' : 'Seller', leftMargin + 80, y, { size: 10 });
-        const amountColor = a.inFavourOf === 'buyer' ? red : green;
-        const prefix = a.inFavourOf === 'buyer' ? '-' : '+';
-        addText(`${prefix}${formatCurrency(parseFloat(a.amount))}`, 0, y, { size: 10, color: amountColor, align: 'right' });
-        y += 7;
-      });
-    }
-
-    // Apportionments Section
-    const validApportionments = apportionments.filter(a => calculateApportionment(a).amountToApportion !== null);
-    if (validApportionments.length > 0) {
-      y += 10;
-      addText('Apportionments', leftMargin, y, { size: 11, color: burgundy, style: 'bold' });
-      y += 3;
-      addLine(y);
-      y += 6;
-
-      validApportionments.forEach(a => {
-        const calc = calculateApportionment(a);
-
-        // Check if we need a new page
-        if (y > 250) {
-          doc.addPage();
-          y = 20;
-        }
-
-        // Apportionment box
-        doc.setFillColor(250, 250, 250);
-        doc.roundedRect(leftMargin, y, contentWidth, 42, 2, 2, 'F');
-
-        y += 7;
-        addText(a.name, leftMargin + 5, y, { size: 10, style: 'bold' });
-
-        y += 7;
-        addText('Billing Period:', leftMargin + 5, y, { size: 8, color: mediumGray });
-        addText(`${formatDate(a.periodStart)} to ${formatDate(a.periodEnd)} (${calc.daysInPeriod} days)`, leftMargin + 35, y, { size: 8 });
-
-        y += 5;
-        addText('Total Charge:', leftMargin + 5, y, { size: 8, color: mediumGray });
-        addText(formatCurrency(parseFloat(a.totalCharge)), leftMargin + 35, y, { size: 8 });
-        addText('Daily Rate:', leftMargin + 85, y, { size: 8, color: mediumGray });
-        addText(formatCurrency(calc.dailyRate), leftMargin + 105, y, { size: 8 });
-
-        y += 5;
-        addText('Balance on Statement:', leftMargin + 5, y, { size: 8, color: mediumGray });
-        addText(formatCurrency(parseFloat(a.balanceOwed)), leftMargin + 45, y, { size: 8 });
-        addText('Days to Apportion:', leftMargin + 85, y, { size: 8, color: mediumGray });
-        addText(`${calc.daysToApportion}`, leftMargin + 115, y, { size: 8 });
-
-        y += 8;
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.2);
-        doc.setLineDashPattern([1, 1], 0);
-        doc.line(leftMargin + 5, y, pageWidth - 25, y);
-        doc.setLineDashPattern([], 0);
-
-        y += 5;
-        addText(`Apportionment payable to ${calc.paidTo}`, leftMargin + 5, y, { size: 9, style: 'bold' });
-        const amountColor = calc.action === 'add' ? green : red;
-        const prefix = calc.action === 'add' ? '+' : '-';
-        addText(`${prefix}${formatCurrency(calc.amountToApportion)}`, 0, y, { size: 10, color: amountColor, style: 'bold', align: 'right' });
-
-        y += 12;
-      });
-    }
-
-    // Check if we need a new page for the total
-    if (y > 240) {
-      doc.addPage();
-      y = 20;
-    }
-
-    // Total Section
-    y += 8;
-    doc.setFillColor(...burgundy);
-    doc.roundedRect(leftMargin, y, contentWidth, 24, 2, 2, 'F');
-
-    y += 9;
-    addText('BALANCE TO COMPLETE', leftMargin + 8, y, { size: 9, color: [255, 255, 255], style: 'bold' });
-    y += 9;
-    doc.setFontSize(18);
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrency(total), leftMargin + 8, y);
-
-    // Footer
-    y += 20;
-    addLine(y, [229, 224, 224]);
-    y += 8;
-    doc.setFontSize(8);
-    doc.setTextColor(...lightGray);
-    doc.text('This completion statement was generated by Pinnacle Property Lawyers.', pageWidth / 2, y, { align: 'center' });
-    y += 4;
-    doc.text('Please verify all figures before completion. E&OE.', pageWidth / 2, y, { align: 'center' });
-
-    // Save the PDF
-    const filename = `Completion_Statement_${propertyAddress.replace(/[^a-zA-Z0-9]/g, '_') || 'Property'}_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(filename);
+    downloadApportionmentOnly({
+      address: propertyAddress,
+      ourRef: '',
+      completionDate,
+      purchasePrice,
+      allowances,
+      apportionments,
+    });
   };
 
   const total = calculateTotal();
+  const canExport = total !== null || apportionments.some(a => calculateApportionment(a).amountToApportion !== null);
 
   return (
     <div style={{
@@ -477,27 +298,27 @@ export default function ApportionmentOnly({ onHome }) {
             )}
             <button
               onClick={generatePDF}
-              disabled={!total}
+              disabled={!canExport}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
                 padding: '10px 20px',
-                background: total ? colors.burgundy : '#ccc',
+                background: canExport ? colors.burgundy : '#ccc',
                 color: 'white',
                 border: 'none',
                 borderRadius: 8,
                 fontWeight: 600,
                 fontSize: 14,
-                cursor: total ? 'pointer' : 'not-allowed',
+                cursor: canExport ? 'pointer' : 'not-allowed',
                 transition: 'all 0.2s',
-                boxShadow: total ? '0 2px 8px rgba(114, 47, 55, 0.3)' : 'none',
+                boxShadow: canExport ? '0 2px 8px rgba(114, 47, 55, 0.3)' : 'none',
               }}
-              onMouseOver={e => total && (e.currentTarget.style.background = colors.burgundyDark)}
-              onMouseOut={e => total && (e.currentTarget.style.background = colors.burgundy)}
+              onMouseOver={e => canExport && (e.currentTarget.style.background = colors.burgundyDark)}
+              onMouseOut={e => canExport && (e.currentTarget.style.background = colors.burgundy)}
             >
               <FileDown size={18} />
-              Export Statement
+              Export PDF
             </button>
           </div>
         </div>
