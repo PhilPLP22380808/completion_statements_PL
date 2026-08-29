@@ -1,4 +1,4 @@
-import { newStatement, newLine, computeStatement } from './statement';
+import { newStatement, newLine, computeStatement, newLinked, computeLinked } from './statement';
 
 // Reproduces the firm's real "Purchase Completion Statement (12)", Crosby.
 test('purchase statement totals match a real worked example', () => {
@@ -66,4 +66,25 @@ test('apportionments fold into the purchase price section', () => {
   expect(scLine).toBeTruthy();
   expect(scLine.payment).toBeCloseTo(603.30, 2);
   expect(c.total).toBeCloseTo(300000 + 603.30, 2);
+});
+
+test('linked deal: net sale proceeds flow into the purchase', () => {
+  const s = newLinked();
+  s.clients = 'Rita Ann Bird';
+  s.completionDate = '2026-08-28';
+  s.sale.price = '430000';
+  s.sale.costs = [newLine({ label: 'Our Legal Fee', amount: '1595', vatable: true })];
+  s.purchase.price = '429950';
+  s.purchase.costs = [newLine({ label: 'Our Legal Fee', amount: '1795', vatable: true })];
+
+  const c = computeLinked(s);
+  expect(c.sale.direction).toBe('owedToClient');
+  expect(c.netProceeds).toBeCloseTo(430000 - 1914, 2); // 428,086
+
+  const proceeds = c.purchase.sections[2].lines.find((l) => l.label === 'Net sale proceeds');
+  expect(proceeds).toBeTruthy();
+  expect(proceeds.receipt).toBeCloseTo(428086, 2);
+
+  // purchase: 429,950 + (1795 + VAT 359) - 428,086 net proceeds
+  expect(c.purchase.total).toBeCloseTo(429950 + 2154 - 428086, 2);
 });

@@ -46,6 +46,41 @@ export function newStatement(matterType) {
   };
 }
 
+// A linked sale-and-purchase: shared client/date/status, plus a sale and a
+// purchase sub-statement. The net sale balance feeds the purchase automatically.
+export function newLinked() {
+  return {
+    mode: 'linked',
+    clients: '',
+    completionDate: '',
+    status: 'Provisional',
+    sale: { ...newStatement('sale'), costs: [newLine({ label: 'Our Legal Fee', vatable: true })] },
+    purchase: newStatement('purchase'),
+  };
+}
+
+// Compute both sides of a linked deal. The sale's net balance is injected into
+// the purchase as a single "Net sale proceeds" receipt line.
+export function computeLinked(state) {
+  const shared = { clients: state.clients, completionDate: state.completionDate, status: state.status };
+  const saleStatement = { ...state.sale, ...shared, matterType: 'sale' };
+  const sale = computeStatement(saleStatement);
+
+  // owedToClient -> proceeds available to the purchase; dueFromClient -> a shortfall to carry.
+  const netProceeds = sale.direction === 'owedToClient' ? sale.absTotal : -sale.absTotal;
+  const proceedsLine = { id: 'net-sale-proceeds', label: 'Net sale proceeds', amount: String(round2(netProceeds)), vatable: false, locked: true };
+
+  const purchaseStatement = {
+    ...state.purchase,
+    ...shared,
+    matterType: 'purchase',
+    funds: [proceedsLine, ...state.purchase.funds],
+  };
+  const purchase = computeStatement(purchaseStatement);
+
+  return { sale, purchase, netProceeds, saleStatement, purchaseStatement };
+}
+
 // Effective signed account balance for a charge (+ = arrears, - = credit).
 export function chargeBalanceValue(charge) {
   const n = parseMoney(charge.accountBalance);

@@ -3,13 +3,13 @@ import { colors } from '../theme';
 import { formatAmount } from '../lib/format';
 
 // On-screen preview of the completion statement ledger.
-export default function LedgerPreview({ computed, statement }) {
+export default function LedgerPreview({ computed, statement, title = 'Client Completion Statement' }) {
   const { sections, absTotal, wording } = computed;
 
   return (
     <div style={{ background: 'white', border: `1px solid ${colors.line}`, borderRadius: 12, padding: '20px 22px', fontSize: 13 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-        <strong style={{ fontSize: 15, color: colors.ink }}>Client Completion Statement</strong>
+        <strong style={{ fontSize: 15, color: colors.ink }}>{title}</strong>
         <span style={{ fontSize: 12, color: colors.faint }}>{statement.status}</span>
       </div>
       <div style={{ color: colors.muted, marginBottom: 14 }}>

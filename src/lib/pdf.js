@@ -281,15 +281,24 @@ function fileStem(statement, kind) {
 
 export function downloadCompletionSet(statement, computed) {
   buildCompletionStatementPDF(statement, computed).save(fileStem(statement, 'Completion Statement'));
+  maybeApportionmentPdf(statement);
+}
 
-  if (statement.includeApportionments) {
-    const charges = statement.charges
-      .map((c) => ({ ...c, accountBalance: c.accountBalance === '' ? '' : chargeBalanceValue(c) }));
-    const anyComplete = charges.some((c) => calculateApportionment(c, statement.completionDate).complete);
-    if (anyComplete) {
-      buildApportionmentStatementPDF(statement, charges).save(fileStem(statement, 'Apportionment Statement'));
-    }
-  }
+function maybeApportionmentPdf(statement, kind = 'Apportionment Statement') {
+  if (!statement.includeApportionments) return;
+  const charges = statement.charges
+    .map((c) => ({ ...c, accountBalance: c.accountBalance === '' ? '' : chargeBalanceValue(c) }));
+  const anyComplete = charges.some((c) => calculateApportionment(c, statement.completionDate).complete);
+  if (anyComplete) buildApportionmentStatementPDF(statement, charges).save(fileStem(statement, kind));
+}
+
+// Linked sale and purchase: a completion statement for each side, plus an
+// apportionment statement for either side that has charges. Separate downloads.
+export function downloadLinkedSet(state, computed) {
+  buildCompletionStatementPDF(computed.saleStatement, computed.sale).save(fileStem(computed.saleStatement, 'Sale Completion Statement'));
+  buildCompletionStatementPDF(computed.purchaseStatement, computed.purchase).save(fileStem(computed.purchaseStatement, 'Purchase Completion Statement'));
+  maybeApportionmentPdf(computed.saleStatement, 'Sale Apportionment Statement');
+  maybeApportionmentPdf(computed.purchaseStatement, 'Purchase Apportionment Statement');
 }
 
 // Apportionment-only mode: one document, the apportionment statement, with the

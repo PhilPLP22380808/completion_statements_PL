@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Wizard from './modes/Wizard';
 import ApportionmentOnly from './modes/ApportionmentOnly';
 import StatementBuilder from './modes/StatementBuilder';
-import ComingSoon from './modes/ComingSoon';
+import LinkedBuilder from './modes/LinkedBuilder';
 
 export default function App() {
   const [mode, setMode] = useState('home');
@@ -16,7 +16,7 @@ export default function App() {
     case 'sale':
       return <StatementBuilder matterType="sale" onHome={goHome} />;
     case 'linked':
-      return <ComingSoon title="Linked sale & purchase" onHome={goHome} />;
+      return <LinkedBuilder onHome={goHome} />;
     default:
       return <Wizard onPick={setMode} />;
   }
