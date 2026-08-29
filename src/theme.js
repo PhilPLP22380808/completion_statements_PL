@@ -14,7 +14,7 @@ export const colors = {
   negative: '#dc2626',
 };
 
-// Firm details – printed on outward-facing statements
+// Firm details, printed on outward-facing statements
 export const firm = {
   name: 'Pinnacle Property Lawyers',
   addressLines: ['1 King William Street', 'London', 'EC4N 7BJ'],

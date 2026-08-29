@@ -78,22 +78,22 @@ export default function ChargesEditor({ charges, completionDate, onChange }) {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
                     <Field label="Total charge for period (£)"><MoneyInput value={charge.totalCharge} onChange={(v) => update(charge.id, { totalCharge: v })} /></Field>
-                    <Field label={`Balance on managing agent statement (£) — ${charge.balanceType === 'credit' ? 'in credit' : 'arrears'}`}>
+                    <Field label={`Balance on the managing agent's statement (£), ${charge.balanceType === 'credit' ? 'in credit' : 'in arrears'}`}>
                       <MoneyInput value={charge.accountBalance} onChange={(v) => update(charge.id, { accountBalance: v })} />
                     </Field>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, fontSize: 13 }}>
-                    <Field label="Days in period"><div style={readonlyBox}>{calc.daysInPeriod ?? '—'}</div></Field>
-                    <Field label="Daily rate (£)"><div style={readonlyBox}>{calc.dailyRate !== null ? calc.dailyRate.toFixed(4) : '—'}</div></Field>
-                    <Field label="Days to apportion"><div style={readonlyBox}>{calc.daysToApportion ?? '—'}</div></Field>
-                    <Field label="Buyer's share (£)"><div style={readonlyBox}>{calc.buyerShare !== null ? formatCurrency(calc.buyerShare) : '—'}</div></Field>
+                    <Field label="Days in period"><div style={readonlyBox}>{calc.daysInPeriod ?? '-'}</div></Field>
+                    <Field label="Daily rate (£)"><div style={readonlyBox}>{calc.dailyRate !== null ? calc.dailyRate.toFixed(4) : '-'}</div></Field>
+                    <Field label="Days to apportion"><div style={readonlyBox}>{calc.daysToApportion ?? '-'}</div></Field>
+                    <Field label="Buyer's share (£)"><div style={readonlyBox}>{calc.buyerShare !== null ? formatCurrency(calc.buyerShare) : '-'}</div></Field>
                   </div>
 
                   {calc.complete && (
                     <div style={{ marginTop: 12, background: colors.panel, borderRadius: 8, padding: 12, fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ color: '#555' }}>
-                        {charge.periodStart && charge.periodEnd && `Period ${formatShortDate(charge.periodStart)}–${formatShortDate(charge.periodEnd)}. `}
+                        {charge.periodStart && charge.periodEnd && `Period ${formatShortDate(charge.periodStart)} to ${formatShortDate(charge.periodEnd)}. `}
                         Apportionment payable to <strong>{calc.paidTo}</strong>
                       </span>
                       <span style={{ fontSize: 16, fontWeight: 700, color: calc.action === 'add' ? colors.positive : colors.negative }}>

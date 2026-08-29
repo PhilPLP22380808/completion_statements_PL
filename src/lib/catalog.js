@@ -1,7 +1,7 @@
 // Quick-add catalogues for the statement sections. `vatable` is the default
 // VAT-on/off state for that line; the user can still toggle it per line.
 
-// Purchase — Section 1 additions to the gross price (no VAT column here).
+// Purchase, section 1 additions to the gross price (no VAT column here).
 export const purchasePriceAdditions = [
   { label: 'Stamp Duty Land Tax' },
   { label: 'Land Transaction Tax (Wales)' },
@@ -17,7 +17,7 @@ export const purchasePriceAdditions = [
   { label: 'Misc Payment' },
 ];
 
-// Purchase — Section 2 costs & disbursements.
+// Purchase, section 2 costs & disbursements.
 export const purchaseCosts = [
   { label: 'Our Legal Fee', vatable: true },
   { label: 'Search Pack Fee', vatable: true },
@@ -42,7 +42,7 @@ export const purchaseCosts = [
   { label: 'Telegraphic Transfer / Bank Fee', vatable: true },
 ];
 
-// Purchase — Section 3 funds received / allowances.
+// Purchase, section 3 funds received / allowances.
 export const purchaseFunds = [
   { label: 'Deposit' },
   { label: 'Mortgage Advance' },
@@ -54,7 +54,7 @@ export const purchaseFunds = [
   { label: 'Miscellaneous Receipt' },
 ];
 
-// Sale — Section 2 costs & disbursements.
+// Sale, section 2 costs & disbursements.
 export const saleCosts = [
   { label: 'Our Legal Fee', vatable: true },
   { label: 'Leasehold Fee', vatable: true },
@@ -71,7 +71,7 @@ export const saleCosts = [
   { label: 'Misc Payment' },
 ];
 
-// Sale — Section 3 receipts / allowances.
+// Sale, section 3 receipts / allowances.
 export const saleReceipts = [
   { label: 'Payment on Account' },
   { label: 'Apportionments from Buyer' },

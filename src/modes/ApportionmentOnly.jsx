@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, FileDown, Calculator, Building2, CalendarDays, PoundSterling, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
+import ApportionmentPreview from '../components/ApportionmentPreview';
 
 // Brand colors extracted from Pinnacle logo
 const colors = {
@@ -214,13 +215,13 @@ export default function ApportionmentOnly({ onHome }) {
 
   // Format currency
   const formatCurrency = (value) => {
-    if (value === null || value === undefined || isNaN(value)) return '—';
+    if (value === null || value === undefined || isNaN(value)) return '-';
     return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value);
   };
 
   // Format date for display
   const formatDate = (dateString) => {
-    if (!dateString) return '—';
+    if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
@@ -503,7 +504,8 @@ export default function ApportionmentOnly({ onHome }) {
       </header>
 
       {/* Main Content */}
-      <main style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px' }}>
+      <main style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 24px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 420px', gap: 28, alignItems: 'start' }}>
+        <div>
 
         {/* Property Details Card */}
         <section style={{
@@ -895,7 +897,7 @@ export default function ApportionmentOnly({ onHome }) {
                             color: '#555',
                             fontWeight: 500,
                           }}>
-                            {calc.daysInPeriod ?? '—'}
+                            {calc.daysInPeriod ?? '-'}
                           </div>
                         </div>
                       </div>
@@ -913,7 +915,7 @@ export default function ApportionmentOnly({ onHome }) {
                             color: '#555',
                             fontWeight: 500,
                           }}>
-                            {calc.dailyRate !== null ? calc.dailyRate.toFixed(2) : '—'}
+                            {calc.dailyRate !== null ? calc.dailyRate.toFixed(2) : '-'}
                           </div>
                         </div>
                         <div>
@@ -948,7 +950,7 @@ export default function ApportionmentOnly({ onHome }) {
                             color: '#555',
                             fontWeight: 500,
                           }}>
-                            {calc.daysToApportion ?? '—'}
+                            {calc.daysToApportion ?? '-'}
                           </div>
                         </div>
                         <div>
@@ -963,7 +965,7 @@ export default function ApportionmentOnly({ onHome }) {
                             color: '#555',
                             fontWeight: 600,
                           }}>
-                            {calc.amountToApportion !== null ? calc.amountToApportion.toFixed(2) : '—'}
+                            {calc.amountToApportion !== null ? calc.amountToApportion.toFixed(2) : '-'}
                           </div>
                         </div>
                       </div>
@@ -982,7 +984,7 @@ export default function ApportionmentOnly({ onHome }) {
                             alignItems: 'center',
                           }}>
                             <span style={{ color: '#555' }}>
-                              Apportionment payable to <strong>{calc.paidTo}</strong> — <em>{calc.action === 'add' ? 'add to' : 'deduct from'} purchase price</em>
+                              Apportionment payable to <strong>{calc.paidTo}</strong>. <em>{calc.action === 'add' ? 'Add to' : 'Deduct from'} purchase price.</em>
                             </span>
                             <span style={{
                               fontSize: 16,
@@ -1021,7 +1023,7 @@ export default function ApportionmentOnly({ onHome }) {
             fontWeight: 700,
             letterSpacing: '-1px',
           }}>
-            {total !== null ? formatCurrency(total) : '—'}
+            {total !== null ? formatCurrency(total) : '-'}
           </div>
           {total === null && (
             <p style={{ marginTop: 12, fontSize: 14, opacity: 0.8 }}>
@@ -1043,6 +1045,18 @@ export default function ApportionmentOnly({ onHome }) {
           <p>
             The calculator determines the buyer's share based on days remaining after completion, then works out who owes whom.
           </p>
+        </div>
+        </div>
+
+        {/* Live preview */}
+        <div style={{ position: 'sticky', top: 96 }}>
+          <ApportionmentPreview
+            address={propertyAddress}
+            completionDate={completionDate}
+            purchasePrice={purchasePrice}
+            allowances={allowances}
+            apportionments={apportionments}
+          />
         </div>
       </main>
     </div>

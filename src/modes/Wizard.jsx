@@ -3,30 +3,10 @@ import { Calculator, Home, ShoppingCart, ArrowLeftRight, FileText } from 'lucide
 import { colors } from '../theme';
 
 const options = [
-  {
-    id: 'apportionment',
-    icon: Calculator,
-    title: 'Apportionment statement only',
-    blurb: 'Apportion service charge, ground rent or any periodic charge between seller and buyer. Produces a standalone apportionment statement.',
-  },
-  {
-    id: 'purchase',
-    icon: Home,
-    title: 'Purchase completion statement',
-    blurb: 'A client completion statement for a purchase — price, SDLT, disbursements, deposit and mortgage. Fold in apportionments if you need them.',
-  },
-  {
-    id: 'sale',
-    icon: ShoppingCart,
-    title: 'Sale completion statement',
-    blurb: 'A client completion statement for a sale — sale price, agent commission, mortgage redemption and any apportionments from the buyer.',
-  },
-  {
-    id: 'linked',
-    icon: ArrowLeftRight,
-    title: 'Linked sale & purchase',
-    blurb: 'Both statements together, with the net sale proceeds carried straight into the purchase. One set of client and completion details.',
-  },
+  { id: 'apportionment', icon: Calculator, title: 'Apportionment statement only' },
+  { id: 'purchase', icon: Home, title: 'Purchase completion statement' },
+  { id: 'sale', icon: ShoppingCart, title: 'Sale completion statement' },
+  { id: 'linked', icon: ArrowLeftRight, title: 'Linked sale and purchase' },
 ];
 
 export default function Wizard({ onPick }) {
@@ -65,12 +45,12 @@ export default function Wizard({ onPick }) {
         </p>
 
         <div style={{ display: 'grid', gap: 14 }}>
-          {options.map(({ id, icon: Icon, title, blurb }) => (
+          {options.map(({ id, icon: Icon, title }) => (
             <button
               key={id}
               onClick={() => onPick(id)}
               style={{
-                display: 'flex', gap: 16, alignItems: 'flex-start', textAlign: 'left',
+                display: 'flex', gap: 16, alignItems: 'center', textAlign: 'left',
                 background: 'white', border: `1px solid ${colors.line}`, borderRadius: 14,
                 padding: 20, cursor: 'pointer', transition: 'all 0.15s',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
@@ -90,10 +70,7 @@ export default function Wizard({ onPick }) {
               }}>
                 <Icon size={22} color={colors.burgundy} />
               </div>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: colors.ink, marginBottom: 4 }}>{title}</div>
-                <div style={{ fontSize: 13.5, color: colors.muted, lineHeight: 1.5 }}>{blurb}</div>
-              </div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: colors.ink }}>{title}</div>
             </button>
           ))}
         </div>

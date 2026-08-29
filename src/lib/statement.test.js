@@ -1,6 +1,6 @@
 import { newStatement, newLine, computeStatement } from './statement';
 
-// Reproduces the firm's real "Purchase Completion Statement (12)" – Crosby.
+// Reproduces the firm's real "Purchase Completion Statement (12)", Crosby.
 test('purchase statement totals match a real worked example', () => {
   const s = {
     ...newStatement('purchase'),
@@ -23,7 +23,7 @@ test('purchase statement totals match a real worked example', () => {
   expect(c.direction).toBe('dueFromClient');
 });
 
-// Reproduces "Sale Completion Statement (17)" – Longbottom.
+// Reproduces "Sale Completion Statement (17)", Longbottom.
 test('sale statement: proceeds owed to the client', () => {
   const s = {
     ...newStatement('sale'),

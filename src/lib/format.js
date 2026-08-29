@@ -27,13 +27,13 @@ export function formatWithCommas(value) {
   return (negative ? '-' : '') + parts.join('.');
 }
 
-// £1,234.50 — always two decimals. Returns the dash placeholder for null/NaN.
+// £1,234.50 with two decimals. Returns a placeholder for null/NaN.
 export function formatCurrency(value, { blankDash = true } = {}) {
-  if (value === null || value === undefined || isNaN(value)) return blankDash ? '—' : '';
+  if (value === null || value === undefined || isNaN(value)) return blankDash ? '-' : '';
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(round2(value));
 }
 
-// 1,234.50 — no symbol, two decimals (for ledger columns).
+// 1,234.50 with no symbol, two decimals (for ledger columns).
 export function formatAmount(value) {
   if (value === null || value === undefined || isNaN(value)) return '';
   return new Intl.NumberFormat('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(round2(value));

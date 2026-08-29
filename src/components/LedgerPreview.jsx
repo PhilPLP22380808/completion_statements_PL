@@ -13,7 +13,7 @@ export default function LedgerPreview({ computed, statement }) {
         <span style={{ fontSize: 12, color: colors.faint }}>{statement.status}</span>
       </div>
       <div style={{ color: colors.muted, marginBottom: 14 }}>
-        {statement.clients || 'Client(s)'} — {statement.address || 'Property address'}
+        {statement.clients || 'Client(s)'}{statement.address ? `, ${statement.address}` : ''}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px', gap: 4, fontWeight: 600, color: colors.faint, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.4px', paddingBottom: 6, borderBottom: `1px solid ${colors.line}` }}>
@@ -25,7 +25,7 @@ export default function LedgerPreview({ computed, statement }) {
       {sections.map((s) => (
         <div key={s.key}>
           <div style={{ fontWeight: 600, color: colors.burgundy, marginTop: 12, marginBottom: 4 }}>{s.title}</div>
-          {s.lines.length === 0 && <div style={{ color: colors.faint, fontStyle: 'italic', padding: '2px 0' }}>—</div>}
+          {s.lines.length === 0 && <div style={{ color: colors.faint, fontStyle: 'italic', padding: '2px 0' }}>None</div>}
           {s.lines.map((l, i) => (
             <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px', gap: 4, padding: '2px 0' }}>
               <span>{l.label}{l.vatable ? ' (incl. VAT)' : ''}</span>
@@ -34,7 +34,7 @@ export default function LedgerPreview({ computed, statement }) {
             </div>
           ))}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px', gap: 4, padding: '4px 0', borderTop: `1px solid ${colors.line}`, marginTop: 4, fontWeight: 600 }}>
-            <span>Sub-total — {s.title}</span>
+            <span>Subtotal: {s.title}</span>
             <span style={{ textAlign: 'right' }}>{formatAmount(s.subtotal)}</span>
           </div>
         </div>

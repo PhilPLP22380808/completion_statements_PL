@@ -11,7 +11,7 @@ describe('daysBetween', () => {
   });
 });
 
-describe('calculateApportionment (SCS 6.3.3 – seller keeps completion day)', () => {
+describe('calculateApportionment (SCS 6.3.3, seller keeps completion day)', () => {
   const period = { periodStart: '2026-01-01', periodEnd: '2026-12-31', totalCharge: '1200' };
 
   test('seller paid in full: buyer reimburses their post-completion share', () => {
