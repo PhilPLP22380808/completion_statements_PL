@@ -210,12 +210,12 @@ export function buildApportionmentStatementPDF(statement, charges, balanceLedger
       + 'owning the property up to and including the completion date, with the buyer liable from the following day.',
     M.left, y, { size: 8.5, color: GREY, maxWidth: M.right - M.left }
   );
-  y += 16;
+  y += 12;
 
   done.forEach(({ charge, calc }) => {
-    y = pageBreakIfNeeded(doc, y, 62);
-    text(doc, charge.name || charge.category || 'Charge', M.left, y, { size: 11, color: BURGUNDY, style: 'bold' });
-    y += 8;
+    y = pageBreakIfNeeded(doc, y, 46);
+    text(doc, charge.name || charge.category || 'Charge', M.left, y, { size: 10.5, color: BURGUNDY, style: 'bold' });
+    y += 6;
 
     const rows = [
       ['Billing period', `${formatShortDate(charge.periodStart)} to ${formatShortDate(charge.periodEnd)}  (${calc.daysInPeriod} days)`],
@@ -226,40 +226,39 @@ export function buildApportionmentStatementPDF(statement, charges, balanceLedger
       ["Buyer's share of the period", formatCurrency(calc.buyerShare)],
     ];
     rows.forEach(([k, v]) => {
-      text(doc, k, M.left + 5, y, { size: 9, color: GREY });
-      text(doc, v, M.left + 80, y, { size: 9, color: INK });
-      y += 6.4;
+      text(doc, k, M.left + 4, y, { size: 9, color: GREY });
+      text(doc, v, M.left + 78, y, { size: 9, color: INK });
+      y += 5;
     });
 
-    y += 2;
+    y += 1;
     doc.setDrawColor(...RULE);
     doc.setLineWidth(0.3);
-    doc.line(M.left + 5, y, M.right, y);
-    y += 7;
-    text(doc, `Apportionment payable to the ${calc.paidTo.toLowerCase()}`, M.left + 5, y, { size: 10, color: INK, style: 'bold' });
-    text(doc, formatCurrency(calc.amountToApportion), M.right, y, { size: 11.5, color: BURGUNDY, style: 'bold', align: 'right' });
-    y += 16;
+    doc.line(M.left + 4, y, M.right, y);
+    y += 5.5;
+    text(doc, `Apportionment payable to the ${calc.paidTo.toLowerCase()}`, M.left + 4, y, { size: 10, color: INK, style: 'bold' });
+    text(doc, formatCurrency(calc.amountToApportion), M.right, y, { size: 11, color: BURGUNDY, style: 'bold', align: 'right' });
+    y += 12;
   });
 
   // Optional: how the apportionments feed the completion balance
   if (balanceLedger && balanceLedger.length) {
-    y = pageBreakIfNeeded(doc, y, 16 + balanceLedger.length * 7);
+    y = pageBreakIfNeeded(doc, y, 10 + balanceLedger.length * 6);
     rule(doc, y);
-    y += 8;
+    y += 6;
     text(doc, 'EFFECT ON THE COMPLETION BALANCE', M.left, y, { size: 9, color: BURGUNDY, style: 'bold' });
-    y += 8;
+    y += 6;
     balanceLedger.forEach(({ label, value }) => {
-      text(doc, label, M.left + 5, y, { size: 9.5, color: INK });
+      text(doc, label, M.left + 4, y, { size: 9.5, color: INK });
       const display = value < 0 ? `(${formatAmount(-value)})` : formatAmount(value);
       text(doc, display, M.right, y, { size: 9.5, color: INK, align: 'right' });
-      y += LINE_H;
+      y += 5.4;
     });
     const total = balanceLedger.reduce((t, l) => t + l.value, 0);
-    doc.line(M.left + 120, y - 4, M.right, y - 4);
-    y += 1.5;
-    text(doc, 'Balance to complete', M.left + 5, y, { size: 9.5, color: INK, style: 'bold' });
+    doc.line(M.left + 120, y - 3.5, M.right, y - 3.5);
+    text(doc, 'Balance to complete', M.left + 4, y, { size: 9.5, color: INK, style: 'bold' });
     text(doc, formatCurrency(total), M.right, y, { size: 9.5, color: INK, style: 'bold', align: 'right' });
-    y += 10;
+    y += 8;
   }
 
   const singleEnd = done.length && done.every((r) => r.charge.periodEnd === done[0].charge.periodEnd)
