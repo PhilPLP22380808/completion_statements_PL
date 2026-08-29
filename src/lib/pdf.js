@@ -18,7 +18,7 @@ const RULE = [214, 205, 205];
 
 const M = { left: 20, right: 190, top: 22 };
 const COL = { pay: 143, rec: 190 }; // right edges of the two money columns
-const LINE_H = 6.6; // vertical step for a single ledger row
+const LINE_H = 6.2; // vertical step for a single ledger row
 
 function newDoc() {
   return new jsPDF({ unit: 'mm', format: 'a4' });
@@ -70,6 +70,21 @@ function header(doc, { title, statement }) {
   return y + 12;
 }
 
+// Large faint "DRAFT" stamped diagonally across every page.
+function draftWatermark(doc) {
+  const pages = doc.getNumberOfPages();
+  for (let p = 1; p <= pages; p += 1) {
+    doc.setPage(p);
+    doc.saveGraphicsState();
+    try { doc.setGState(new doc.GState({ opacity: 0.10 })); } catch (e) { /* noop */ }
+    doc.setTextColor(...BURGUNDY);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(110);
+    doc.text('DRAFT', 105, 165, { align: 'center', angle: 32 });
+    doc.restoreGraphicsState();
+  }
+}
+
 function footer(doc, note) {
   const pages = doc.getNumberOfPages();
   for (let p = 1; p <= pages; p += 1) {
@@ -108,7 +123,7 @@ function lineRow(doc, y, label, { payment, receipt, indent = 5, bold = false } =
 }
 
 function pageBreakIfNeeded(doc, y, needed = 24) {
-  if (y + needed > 256) {
+  if (y + needed > 258) {
     doc.addPage();
     return M.top + 6;
   }
@@ -125,17 +140,17 @@ export function buildCompletionStatementPDF(statement, computed) {
 
   y = columnHeadings(doc, y);
   rule(doc, y - 1);
-  y += 7;
+  y += 5;
 
   computed.sections.forEach((section, si) => {
-    y = pageBreakIfNeeded(doc, y, 28);
-    if (si > 0) y += 3;
+    y = pageBreakIfNeeded(doc, y, 26);
+    if (si > 0) y += 1.5;
     text(doc, section.title.toUpperCase(), M.left, y, { size: 9, color: BURGUNDY, style: 'bold' });
-    y += 7;
+    y += 6;
 
     if (section.lines.length === 0) {
       text(doc, 'None', M.left + 5, y, { size: 9.5, color: FAINT, style: 'italic' });
-      y += LINE_H;
+      y += LINE_H - 1;
     }
     section.lines.forEach((l) => {
       y = pageBreakIfNeeded(doc, y);
@@ -153,29 +168,30 @@ export function buildCompletionStatementPDF(statement, computed) {
       receipt: onPay ? null : section.subtotal,
       bold: true,
     });
-    y += 5;
+    y += 3;
   });
 
   // Balance box
-  y = pageBreakIfNeeded(doc, y, 32);
-  y += 6;
+  y = pageBreakIfNeeded(doc, y, 28);
+  y += 4;
   doc.setFillColor(...BURGUNDY);
-  doc.roundedRect(M.left, y, M.right - M.left, 20, 2, 2, 'F');
-  text(doc, computed.wording.toUpperCase(), M.left + 8, y + 12, { size: 10.5, color: [255, 255, 255], style: 'bold' });
-  text(doc, formatCurrency(computed.absTotal), M.right - 8, y + 12.5, { size: 14, color: [255, 255, 255], style: 'bold', align: 'right' });
-  y += 30;
+  doc.roundedRect(M.left, y, M.right - M.left, 18, 2, 2, 'F');
+  text(doc, computed.wording.toUpperCase(), M.left + 8, y + 11, { size: 10.5, color: [255, 255, 255], style: 'bold' });
+  text(doc, formatCurrency(computed.absTotal), M.right - 8, y + 11.5, { size: 14, color: [255, 255, 255], style: 'bold', align: 'right' });
+  y += 27;
 
   text(doc, 'Errors and Omissions Excepted', M.left, y, { size: 8.5, color: GREY, style: 'italic' });
 
   const note = footNote(statement, computed);
+  if (statement.status === 'Draft') draftWatermark(doc);
   footer(doc, note);
   return doc;
 }
 
 function footNote(statement, computed) {
   const parts = [`Prepared ${formatLongDate(new Date().toISOString().slice(0, 10))}.`];
-  if (statement.status === 'Provisional') {
-    parts.push('Figures are provisional and subject to final adjustment once confirmed.');
+  if (statement.status === 'Draft') {
+    parts.push('Draft for checking. Figures are not final.');
   }
   if (computed && computed.appt && computed.appt.periodEnds && computed.appt.periodEnds.length > 1) {
     parts.push('See the separate apportionment statement for the breakdown of apportioned charges.');
@@ -267,6 +283,7 @@ export function buildApportionmentStatementPDF(statement, charges, balanceLedger
     ? `Prepared ${formatLongDate(new Date().toISOString().slice(0, 10))}. Apportionments run to the end of ${formatMonthYear(singleEnd)}.`
     : `Prepared ${formatLongDate(new Date().toISOString().slice(0, 10))}.`;
   text(doc, 'Errors and Omissions Excepted', M.left, y, { size: 8.5, color: GREY, style: 'italic' });
+  if (statement.status === 'Draft') draftWatermark(doc);
   footer(doc, note);
   return doc;
 }
@@ -276,7 +293,8 @@ export function buildApportionmentStatementPDF(statement, charges, balanceLedger
 // ---------------------------------------------------------------------------
 function fileStem(statement, kind) {
   const ref = (statement.ourRef || statement.address || 'Statement').replace(/[^\w.-]+/g, '_').replace(/^_+|_+$/g, '');
-  return `${ref} ${kind}.pdf`;
+  const stamp = (statement.status || 'Draft').toUpperCase();
+  return `${ref} ${kind} ${stamp}.pdf`;
 }
 
 export function downloadCompletionSet(statement, computed) {
@@ -303,8 +321,8 @@ export function downloadLinkedSet(state, computed) {
 
 // Apportionment-only mode: one document, the apportionment statement, with the
 // balance-to-complete summary if a purchase price was entered.
-export function downloadApportionmentOnly({ address, ourRef, completionDate, purchasePrice, allowances, apportionments }) {
-  const statement = { clients: '', address, ourRef, completionDate, status: 'Provisional' };
+export function downloadApportionmentOnly({ address, ourRef, completionDate, status = 'Draft', purchasePrice, allowances, apportionments }) {
+  const statement = { clients: '', address, ourRef, completionDate, status };
   const charges = apportionments.map((a) => ({
     name: a.name,
     category: a.name,

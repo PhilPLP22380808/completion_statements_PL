@@ -61,7 +61,7 @@ export default function StatementBuilder({ matterType, onHome }) {
                 <Field label="Completion date (actual)"><DateInput value={state.completionDate} onChange={(e) => set({ completionDate: e.target.value })} /></Field>
                 <Field label="Status">
                   <select value={state.status} onChange={(e) => set({ status: e.target.value })} style={{ ...inputStyle, cursor: 'pointer' }}>
-                    <option>Draft</option><option>Provisional</option><option>Final</option>
+                    <option>Draft</option><option>Final</option>
                   </select>
                 </Field>
               </div>

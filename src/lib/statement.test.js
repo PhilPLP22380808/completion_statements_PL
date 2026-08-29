@@ -24,21 +24,27 @@ test('purchase statement totals match a real worked example', () => {
 });
 
 // Reproduces "Sale Completion Statement (17)", Longbottom.
+// Sale statement has 4 sections: price, fees & disbursements, costs, receipts.
 test('sale statement: proceeds owed to the client', () => {
   const s = {
     ...newStatement('sale'),
     price: '365000',
-    costs: [
-      newLine({ label: 'Our Legal Fee', amount: '1595', vatable: true }),      // 1595 + VAT = 1914
-      newLine({ label: 'Estate Agent Commission', amount: '8840', vatable: false }),
-    ],
+    costs: [newLine({ label: 'Our Legal Fee', amount: '1595', vatable: true })],  // 1595 + VAT = 1914
+    otherCosts: [newLine({ label: 'Estate Agent Commission', amount: '8840', vatable: false })],
   };
   const c = computeStatement(s);
+  expect(c.sections.map((x) => x.title)).toEqual(['Sale Price', 'Fees and Disbursements', 'Costs', 'Receipts & Allowances']);
   expect(c.sections[0].subtotal).toBeCloseTo(365000, 2);
-  expect(c.sections[1].subtotal).toBeCloseTo(10754, 2);
+  expect(c.sections[1].subtotal).toBeCloseTo(1914, 2);
+  expect(c.sections[2].subtotal).toBeCloseTo(8840, 2);
   expect(c.total).toBeCloseTo(354246, 2);
   expect(c.direction).toBe('owedToClient');
   expect(c.wording).toMatch(/owed to you/);
+});
+
+test('new statements default to Draft', () => {
+  expect(newStatement('sale').status).toBe('Draft');
+  expect(newStatement('purchase').status).toBe('Draft');
 });
 
 test('purchase: buyer-favour allowance reduces the balance; seller-favour increases it', () => {

@@ -20,6 +20,7 @@ export default function ApportionmentOnly({ onHome }) {
   const [completionDate, setCompletionDate] = useState('');
   const [purchasePrice, setPurchasePrice] = useState('');
   const [purchasePriceDisplay, setPurchasePriceDisplay] = useState('');
+  const [status, setStatus] = useState('Draft');
 
   // Format number with commas
   const formatWithCommas = (value) => {
@@ -235,6 +236,7 @@ export default function ApportionmentOnly({ onHome }) {
       address: propertyAddress,
       ourRef: '',
       completionDate,
+      status,
       purchasePrice,
       allowances,
       apportionments,
@@ -351,7 +353,7 @@ export default function ApportionmentOnly({ onHome }) {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#666', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   Completion Date
@@ -394,6 +396,28 @@ export default function ApportionmentOnly({ onHome }) {
                   onFocus={e => e.target.style.borderColor = colors.burgundy}
                   onBlur={e => e.target.style.borderColor = '#e8e4e5'}
                 />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#666', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Status
+                </label>
+                <select
+                  value={status}
+                  onChange={e => setStatus(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '2px solid #e8e4e5',
+                    borderRadius: 10,
+                    fontSize: 15,
+                    outline: 'none',
+                    background: 'white',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option>Draft</option>
+                  <option>Final</option>
+                </select>
               </div>
             </div>
           </div>

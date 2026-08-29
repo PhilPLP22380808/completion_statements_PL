@@ -54,20 +54,28 @@ export const purchaseFunds = [
   { label: 'Miscellaneous Receipt' },
 ];
 
-// Sale, section 2 costs & disbursements.
-export const saleCosts = [
+// Sale: our fees and the disbursements we incur doing the legal work.
+export const saleFees = [
   { label: 'Our Legal Fee', vatable: true },
-  { label: 'Leasehold Fee', vatable: true },
+  { label: 'Leasehold Supplement Fee', vatable: true },
   { label: 'Unregistered Property Fee', vatable: true },
   { label: 'Additional Redemption Fee', vatable: true },
-  { label: 'AML Search Fee', vatable: true },
+  { label: 'Expedited Completion Fee', vatable: true },
+  { label: 'AML / ID Check Fee', vatable: true },
   { label: 'Telegraphic Transfer / Bank Fee', vatable: true },
+  { label: 'Office Copies / OCE Fee' },
+  { label: 'Bankruptcy Search Fee' },
+];
+
+// Sale: other money leaving the completion account (not our fee or disbursement).
+export const saleCostItems = [
   { label: 'Mortgage Redemption' },
   { label: 'Second Mortgage Redemption' },
   { label: 'Estate Agent Commission' },
-  { label: 'Leasehold Pack / OCE Fee' },
-  { label: 'Leaseholder / Management Pack Fee' },
+  { label: 'Leasehold / Management Pack Fee' },
   { label: 'Notice of Transfer / Charge Fee' },
+  { label: 'Deed of Covenant Fee' },
+  { label: 'Landlord / Freeholder Fees' },
   { label: 'Misc Payment' },
 ];
 

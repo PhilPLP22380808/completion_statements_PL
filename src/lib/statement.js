@@ -34,11 +34,12 @@ export function newStatement(matterType) {
     address: '',
     ourRef: '',
     completionDate: '',
-    status: 'Provisional', // 'Draft' | 'Provisional' | 'Final'
+    status: 'Draft', // 'Draft' | 'Final'
     price: '',
     contentsPrice: '',
     priceAdditions: [], // purchase only: SDLT etc.
-    costs: [newLine({ label: 'Our Legal Fee', vatable: true })],
+    costs: [newLine({ label: 'Our Legal Fee', vatable: true })], // fees + disbursements
+    otherCosts: [], // sale "Costs" section: redemption, agent commission, etc.
     funds: [], // purchase: deposit/mortgage/etc.  sale: receipts
     allowances: [],
     includeApportionments: false,
@@ -53,8 +54,8 @@ export function newLinked() {
     mode: 'linked',
     clients: '',
     completionDate: '',
-    status: 'Provisional',
-    sale: { ...newStatement('sale'), costs: [newLine({ label: 'Our Legal Fee', vatable: true })] },
+    status: 'Draft',
+    sale: newStatement('sale'),
     purchase: newStatement('purchase'),
   };
 }
@@ -146,24 +147,31 @@ export function computeStatement(state) {
   }
 
   // ---- SALE ----
+  // Section 1: sale price (RECEIPTS)
   const s1 = [];
   if (parseMoney(state.price) !== 0 || state.price !== '') s1.push({ label: 'Basic Sale Price', receipt: parseMoney(state.price) });
   if (parseMoney(state.contentsPrice) > 0) s1.push({ label: 'Fittings / Contents Price', receipt: parseMoney(state.contentsPrice) });
   sections.push(makeSection('price', 'Sale Price', s1, 'receipt'));
 
-  // Section 2: costs and disbursements (PAYMENTS)
-  const s2 = state.costs
+  // Section 2: our fees and disbursements (PAYMENTS, may carry VAT)
+  const sFees = state.costs
+    .filter((l) => l.label || parseMoney(l.amount))
+    .map((l) => ({ label: l.label || 'Fee', payment: grossOf(l.amount, l.vatable), vatable: l.vatable }));
+  sections.push(makeSection('fees', 'Fees and Disbursements', sFees, 'payment'));
+
+  // Section 3: other costs leaving the completion account (PAYMENTS)
+  const sCosts = (state.otherCosts || [])
     .filter((l) => l.label || parseMoney(l.amount))
     .map((l) => ({ label: l.label || 'Cost', payment: grossOf(l.amount, l.vatable), vatable: l.vatable }));
   state.allowances.forEach((a) => {
-    if (a.inFavourOf === 'buyer' && parseMoney(a.amount)) s2.push({ label: a.description || 'Allowance to buyer', payment: parseMoney(a.amount) });
+    if (a.inFavourOf === 'buyer' && parseMoney(a.amount)) sCosts.push({ label: a.description || 'Allowance to buyer', payment: parseMoney(a.amount) });
   });
   Object.entries(appt.byCategory).forEach(([cat, v]) => {
-    if (v < 0) s2.push({ label: `${cat} Apportionment allowed to buyer`, payment: round2(-v) });
+    if (v < 0) sCosts.push({ label: `${cat} Apportionment allowed to buyer`, payment: round2(-v) });
   });
-  sections.push(makeSection('costs', 'Costs & Disbursements', s2, 'payment'));
+  sections.push(makeSection('costs', 'Costs', sCosts, 'payment'));
 
-  // Section 3: receipts and allowances (RECEIPTS)
+  // Section 4: receipts and allowances (RECEIPTS)
   const s3 = [];
   state.funds.forEach((l) => {
     if (l.label || parseMoney(l.amount)) s3.push({ label: l.label || 'Receipt', receipt: parseMoney(l.amount) });
@@ -179,7 +187,7 @@ export function computeStatement(state) {
   });
   sections.push(makeSection('receipts', 'Receipts & Allowances', s3, 'receipt'));
 
-  const total = round2(sections[0].subtotal + sections[2].subtotal - sections[1].subtotal);
+  const total = round2(sections[0].subtotal + sections[3].subtotal - sections[1].subtotal - sections[2].subtotal);
   return finalise(sections, total, /* positiveMeans */ 'owedToClient', appt);
 }
 

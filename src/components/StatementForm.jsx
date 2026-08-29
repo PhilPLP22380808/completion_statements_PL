@@ -1,26 +1,26 @@
 import React from 'react';
-import { PoundSterling, Receipt, Wallet, CalendarDays, Scale } from 'lucide-react';
+import { PoundSterling, Receipt, Wallet, CalendarDays, Scale, Building2 } from 'lucide-react';
 import { colors, inputStyle, labelStyle } from '../theme';
 import { TextInput, MoneyInput, Checkbox, DeleteButton, AddButton, QuickAdd, Field, SectionCard, AllowanceDatalist, ALLOWANCE_LIST_ID } from './fields';
 import ChargesEditor from './ChargesEditor';
 import { newLine } from '../lib/statement';
-import { purchasePriceAdditions, purchaseCosts, purchaseFunds, saleCosts, saleReceipts, ALLOWANCE_DESCRIPTIONS } from '../lib/catalog';
+import { purchasePriceAdditions, purchaseCosts, purchaseFunds, saleFees, saleCostItems, saleReceipts, ALLOWANCE_DESCRIPTIONS } from '../lib/catalog';
 
 // All the money sections for one statement. `state` is a statement object,
 // `onChange(patch)` merges a partial update. `completionDate` is passed in so a
 // linked deal can share one date across both sides.
 export default function StatementForm({ state, onChange, completionDate }) {
   const isPurchase = state.matterType === 'purchase';
-  const costCatalog = isPurchase ? purchaseCosts : saleCosts;
   const fundsCatalog = isPurchase ? purchaseFunds : saleReceipts;
   const set = onChange;
 
   const editList = (key) => ({
-    add: (item) => set({ [key]: [...state[key], newLine(item)] }),
+    add: (item) => set({ [key]: [...(state[key] || []), newLine(item)] }),
     update: (id, patch) => set({ [key]: state[key].map((l) => (l.id === id ? { ...l, ...patch } : l)) }),
     remove: (id) => set({ [key]: state[key].filter((l) => l.id !== id) }),
   });
   const costs = editList('costs');
+  const otherCosts = editList('otherCosts');
   const funds = editList('funds');
   const additions = editList('priceAdditions');
 
@@ -47,12 +47,30 @@ export default function StatementForm({ state, onChange, completionDate }) {
         )}
       </SectionCard>
 
-      <SectionCard icon={Receipt} title="Costs & disbursements">
-        <LineList lines={state.costs} onUpdate={costs.update} onRemove={costs.remove} showVat />
-        <div style={{ marginTop: 10 }}>
-          <QuickAdd catalog={costCatalog} existingLabels={state.costs.map((l) => l.label)} onAdd={costs.add} placeholder="Add a cost or disbursement..." />
-        </div>
-      </SectionCard>
+      {isPurchase ? (
+        <SectionCard icon={Receipt} title="Costs & disbursements">
+          <LineList lines={state.costs} onUpdate={costs.update} onRemove={costs.remove} showVat />
+          <div style={{ marginTop: 10 }}>
+            <QuickAdd catalog={purchaseCosts} existingLabels={state.costs.map((l) => l.label)} onAdd={costs.add} placeholder="Add a cost or disbursement..." />
+          </div>
+        </SectionCard>
+      ) : (
+        <>
+          <SectionCard icon={Receipt} title="Fees and disbursements">
+            <LineList lines={state.costs} onUpdate={costs.update} onRemove={costs.remove} showVat />
+            <div style={{ marginTop: 10 }}>
+              <QuickAdd catalog={saleFees} existingLabels={state.costs.map((l) => l.label)} onAdd={costs.add} placeholder="Add a fee or disbursement..." />
+            </div>
+          </SectionCard>
+          <SectionCard icon={Building2} title="Costs">
+            {(state.otherCosts || []).length === 0 && <div style={{ color: colors.faint, fontSize: 13, fontStyle: 'italic' }}>Mortgage redemption, estate agent commission, landlord fees, and anything else leaving the completion account.</div>}
+            <LineList lines={state.otherCosts || []} onUpdate={otherCosts.update} onRemove={otherCosts.remove} showVat />
+            <div style={{ marginTop: 10 }}>
+              <QuickAdd catalog={saleCostItems} existingLabels={(state.otherCosts || []).map((l) => l.label)} onAdd={otherCosts.add} placeholder="Add a cost..." />
+            </div>
+          </SectionCard>
+        </>
+      )}
 
       <SectionCard icon={Wallet} title={isPurchase ? 'Funds received' : 'Receipts'}>
         <LineList lines={state.funds} onUpdate={funds.update} onRemove={funds.remove} showVat={false} />
