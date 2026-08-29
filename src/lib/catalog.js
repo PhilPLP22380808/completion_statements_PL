@@ -86,8 +86,6 @@ export const ALLOWANCE_DESCRIPTIONS = [
   'Allowance for indemnity policy',
   'Fixtures and fittings',
   'Allowance for works',
-  'Retention',
-  'Service charge retention',
   'Service charge credit',
   'Allowance for outstanding / snagging works',
   'Allowance for repairs',
