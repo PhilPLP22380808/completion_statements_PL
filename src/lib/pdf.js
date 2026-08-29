@@ -5,41 +5,23 @@
 
 import jsPDF from 'jspdf';
 import { firm } from '../theme';
+import { pinnacleMarkPng } from '../assets/logo';
 import { formatAmount, formatCurrency, formatLongDate, formatShortDate, formatMonthYear, parseMoney } from './format';
 import { calculateApportionment } from './calc';
 import { chargeBalanceValue } from './statement';
 
 const BURGUNDY = [114, 47, 55];
-const BURGUNDY_DARK = [92, 42, 48];
-const BURGUNDY_MID = [122, 48, 58];
 const INK = [34, 34, 34];
 const GREY = [110, 110, 110];
 const FAINT = [150, 150, 150];
 const RULE = [214, 205, 205];
 
-const M = { left: 20, right: 190, top: 20 };
+const M = { left: 20, right: 190, top: 22 };
 const COL = { pay: 143, rec: 190 }; // right edges of the two money columns
+const LINE_H = 6.6; // vertical step for a single ledger row
 
 function newDoc() {
   return new jsPDF({ unit: 'mm', format: 'a4' });
-}
-
-// The Pinnacle "P" mark, drawn as vector so it stays crisp at any size.
-function drawMark(doc, x, y, size) {
-  const s = size;
-  doc.saveGraphicsState();
-  // stem
-  doc.setFillColor(...BURGUNDY_DARK);
-  doc.roundedRect(x, y, s * 0.32, s, s * 0.1, s * 0.1, 'F');
-  // bowl of the P sitting over the top of the stem
-  try { doc.setGState(new doc.GState({ opacity: 0.9 })); } catch (e) { /* older jsPDF */ }
-  doc.setFillColor(...BURGUNDY_MID);
-  doc.circle(x + s * 0.44, y + s * 0.29, s * 0.29, 'F');
-  // punch the counter so it reads as a P, not a blob
-  try { doc.setGState(new doc.GState({ opacity: 1 })); } catch (e) { /* noop */ }
-  doc.setFillColor(255, 255, 255);
-  doc.circle(x + s * 0.5, y + s * 0.3, s * 0.12, 'F');
-  doc.restoreGraphicsState();
 }
 
 function text(doc, str, x, y, { size = 10, color = INK, style = 'normal', align = 'left', maxWidth } = {}) {
@@ -55,17 +37,21 @@ function rule(doc, y, color = RULE, width = 0.3) {
   doc.line(M.left, y, M.right, y);
 }
 
-// Shared header: mark, document title, status pill, matter details block.
+// Shared header: mark, trading name, document title, status marker, matter block.
 function header(doc, { title, statement }) {
-  drawMark(doc, M.left, M.top, 11);
-  text(doc, firm.name, M.left + 16, M.top + 5, { size: 12, color: BURGUNDY, style: 'bold' });
-  text(doc, title, M.left + 16, M.top + 11, { size: 10, color: GREY });
+  const markSize = 13;
+  try {
+    doc.addImage(pinnacleMarkPng, 'PNG', M.left, M.top - 1, markSize, markSize);
+  } catch (e) { /* image unavailable: carry on without the mark */ }
+
+  text(doc, firm.name, M.left + markSize + 5, M.top + 5, { size: 13, color: BURGUNDY, style: 'bold' });
+  text(doc, title, M.left + markSize + 5, M.top + 11.5, { size: 10, color: GREY });
 
   if (statement.status && statement.status !== 'Final') {
     text(doc, statement.status.toUpperCase(), M.right, M.top + 5, { size: 9, color: BURGUNDY, style: 'bold', align: 'right' });
   }
 
-  let y = M.top + 22;
+  let y = M.top + 26;
   const rows = [
     ['Client(s)', statement.clients],
     ['Property', statement.address],
@@ -75,32 +61,33 @@ function header(doc, { title, statement }) {
 
   rows.forEach(([k, v]) => {
     text(doc, k, M.left, y, { size: 9, color: GREY });
-    text(doc, v, M.left + 34, y, { size: 9.5, color: INK });
-    y += 5.4;
+    text(doc, v, M.left + 36, y, { size: 10, color: INK });
+    y += 7;
   });
 
-  y += 2;
+  y += 3;
   rule(doc, y, BURGUNDY, 0.5);
-  return y + 8;
+  return y + 12;
 }
 
 function footer(doc, note) {
   const pages = doc.getNumberOfPages();
   for (let p = 1; p <= pages; p += 1) {
     doc.setPage(p);
-    let y = 272;
+    let y = 270;
     rule(doc, y, RULE, 0.3);
-    y += 5;
+    y += 6;
     text(doc, `${firm.name}, ${firm.addressLines.join(', ')}`, M.left, y, { size: 7.5, color: GREY });
     text(doc, `${firm.phone}   ${firm.email}`, M.right, y, { size: 7.5, color: GREY, align: 'right' });
-    y += 4;
+    y += 4.5;
     text(
       doc,
-      `Authorised and regulated by the ${firm.regulator}, Licence ${firm.licenceNumber}. Company ${firm.companyNumber}.`,
-      M.left, y, { size: 7.5, color: GREY }
+      `${firm.legalName} (trading as ${firm.name}) is authorised and regulated by the ${firm.regulator}, `
+        + `Licence ${firm.licenceNumber}. Registered in England and Wales, company ${firm.companyNumber}.`,
+      M.left, y, { size: 7.5, color: GREY, maxWidth: M.right - M.left }
     );
-    y += 4;
-    text(doc, note, M.left, y, { size: 7.5, color: FAINT });
+    y += 8;
+    text(doc, note, M.left, y, { size: 7.5, color: FAINT, maxWidth: 140 });
     if (pages > 1) text(doc, `Page ${p} of ${pages}`, M.right, y, { size: 7.5, color: FAINT, align: 'right' });
   }
 }
@@ -108,22 +95,22 @@ function footer(doc, note) {
 function columnHeadings(doc, y) {
   text(doc, 'Payments £', COL.pay, y, { size: 8, color: GREY, align: 'right' });
   text(doc, 'Receipts £', COL.rec, y, { size: 8, color: GREY, align: 'right' });
-  return y + 3;
+  return y + 4;
 }
 
-function lineRow(doc, y, label, { payment, receipt, indent = 4, bold = false } = {}) {
+function lineRow(doc, y, label, { payment, receipt, indent = 5, bold = false } = {}) {
   const style = bold ? 'bold' : 'normal';
   const wrapped = doc.splitTextToSize(label, 96);
   text(doc, wrapped, M.left + indent, y, { size: 9.5, color: INK, style });
   if (payment != null) text(doc, formatAmount(payment), COL.pay, y, { size: 9.5, color: INK, style, align: 'right' });
   if (receipt != null) text(doc, formatAmount(receipt), COL.rec, y, { size: 9.5, color: INK, style, align: 'right' });
-  return y + 5 + (wrapped.length - 1) * 4.4;
+  return y + LINE_H + (wrapped.length - 1) * 4.6;
 }
 
-function pageBreakIfNeeded(doc, y, needed = 20) {
-  if (y + needed > 262) {
+function pageBreakIfNeeded(doc, y, needed = 24) {
+  if (y + needed > 256) {
     doc.addPage();
-    return M.top + 4;
+    return M.top + 6;
   }
   return y;
 }
@@ -138,16 +125,17 @@ export function buildCompletionStatementPDF(statement, computed) {
 
   y = columnHeadings(doc, y);
   rule(doc, y - 1);
-  y += 4;
+  y += 7;
 
-  computed.sections.forEach((section) => {
-    y = pageBreakIfNeeded(doc, y, 24);
+  computed.sections.forEach((section, si) => {
+    y = pageBreakIfNeeded(doc, y, 28);
+    if (si > 0) y += 3;
     text(doc, section.title.toUpperCase(), M.left, y, { size: 9, color: BURGUNDY, style: 'bold' });
-    y += 5;
+    y += 7;
 
     if (section.lines.length === 0) {
-      text(doc, 'None', M.left + 4, y, { size: 9.5, color: FAINT, style: 'italic' });
-      y += 5;
+      text(doc, 'None', M.left + 5, y, { size: 9.5, color: FAINT, style: 'italic' });
+      y += LINE_H;
     }
     section.lines.forEach((l) => {
       y = pageBreakIfNeeded(doc, y);
@@ -157,24 +145,25 @@ export function buildCompletionStatementPDF(statement, computed) {
 
     doc.setDrawColor(...RULE);
     doc.setLineWidth(0.3);
-    doc.line(M.left + 100, y - 3.5, COL.rec, y - 3.5);
+    doc.line(M.left + 100, y - 4, COL.rec, y - 4);
+    y += 1.5;
     const onPay = section.column === 'payment';
     y = lineRow(doc, y, `${section.title} subtotal`, {
       payment: onPay ? section.subtotal : null,
       receipt: onPay ? null : section.subtotal,
       bold: true,
     });
-    y += 4;
+    y += 5;
   });
 
   // Balance box
-  y = pageBreakIfNeeded(doc, y, 26);
-  y += 2;
+  y = pageBreakIfNeeded(doc, y, 32);
+  y += 6;
   doc.setFillColor(...BURGUNDY);
-  doc.roundedRect(M.left, y, M.right - M.left, 16, 2, 2, 'F');
-  text(doc, computed.wording.toUpperCase(), M.left + 6, y + 10, { size: 10, color: [255, 255, 255], style: 'bold' });
-  text(doc, formatCurrency(computed.absTotal), M.right - 6, y + 10.5, { size: 13, color: [255, 255, 255], style: 'bold', align: 'right' });
-  y += 24;
+  doc.roundedRect(M.left, y, M.right - M.left, 20, 2, 2, 'F');
+  text(doc, computed.wording.toUpperCase(), M.left + 8, y + 12, { size: 10.5, color: [255, 255, 255], style: 'bold' });
+  text(doc, formatCurrency(computed.absTotal), M.right - 8, y + 12.5, { size: 14, color: [255, 255, 255], style: 'bold', align: 'right' });
+  y += 30;
 
   text(doc, 'Errors and Omissions Excepted', M.left, y, { size: 8.5, color: GREY, style: 'italic' });
 
@@ -221,12 +210,12 @@ export function buildApportionmentStatementPDF(statement, charges, balanceLedger
       + 'owning the property up to and including the completion date, with the buyer liable from the following day.',
     M.left, y, { size: 8.5, color: GREY, maxWidth: M.right - M.left }
   );
-  y += 12;
+  y += 16;
 
   done.forEach(({ charge, calc }) => {
-    y = pageBreakIfNeeded(doc, y, 46);
-    text(doc, charge.name || charge.category || 'Charge', M.left, y, { size: 10.5, color: BURGUNDY, style: 'bold' });
-    y += 6;
+    y = pageBreakIfNeeded(doc, y, 62);
+    text(doc, charge.name || charge.category || 'Charge', M.left, y, { size: 11, color: BURGUNDY, style: 'bold' });
+    y += 8;
 
     const rows = [
       ['Billing period', `${formatShortDate(charge.periodStart)} to ${formatShortDate(charge.periodEnd)}  (${calc.daysInPeriod} days)`],
@@ -237,39 +226,40 @@ export function buildApportionmentStatementPDF(statement, charges, balanceLedger
       ["Buyer's share of the period", formatCurrency(calc.buyerShare)],
     ];
     rows.forEach(([k, v]) => {
-      text(doc, k, M.left + 4, y, { size: 9, color: GREY });
-      text(doc, v, M.left + 78, y, { size: 9, color: INK });
-      y += 5;
+      text(doc, k, M.left + 5, y, { size: 9, color: GREY });
+      text(doc, v, M.left + 80, y, { size: 9, color: INK });
+      y += 6.4;
     });
 
-    y += 1;
+    y += 2;
     doc.setDrawColor(...RULE);
     doc.setLineWidth(0.3);
-    doc.line(M.left + 4, y, M.right, y);
-    y += 5.5;
-    text(doc, `Apportionment payable to the ${calc.paidTo.toLowerCase()}`, M.left + 4, y, { size: 10, color: INK, style: 'bold' });
-    text(doc, formatCurrency(calc.amountToApportion), M.right, y, { size: 11, color: BURGUNDY, style: 'bold', align: 'right' });
-    y += 12;
+    doc.line(M.left + 5, y, M.right, y);
+    y += 7;
+    text(doc, `Apportionment payable to the ${calc.paidTo.toLowerCase()}`, M.left + 5, y, { size: 10, color: INK, style: 'bold' });
+    text(doc, formatCurrency(calc.amountToApportion), M.right, y, { size: 11.5, color: BURGUNDY, style: 'bold', align: 'right' });
+    y += 16;
   });
 
   // Optional: how the apportionments feed the completion balance
   if (balanceLedger && balanceLedger.length) {
-    y = pageBreakIfNeeded(doc, y, 10 + balanceLedger.length * 6);
+    y = pageBreakIfNeeded(doc, y, 16 + balanceLedger.length * 7);
     rule(doc, y);
-    y += 6;
+    y += 8;
     text(doc, 'EFFECT ON THE COMPLETION BALANCE', M.left, y, { size: 9, color: BURGUNDY, style: 'bold' });
-    y += 6;
+    y += 8;
     balanceLedger.forEach(({ label, value }) => {
-      text(doc, label, M.left + 4, y, { size: 9.5, color: INK });
+      text(doc, label, M.left + 5, y, { size: 9.5, color: INK });
       const display = value < 0 ? `(${formatAmount(-value)})` : formatAmount(value);
       text(doc, display, M.right, y, { size: 9.5, color: INK, align: 'right' });
-      y += 5.4;
+      y += LINE_H;
     });
     const total = balanceLedger.reduce((t, l) => t + l.value, 0);
-    doc.line(M.left + 120, y - 3.5, M.right, y - 3.5);
-    text(doc, 'Balance to complete', M.left + 4, y, { size: 9.5, color: INK, style: 'bold' });
+    doc.line(M.left + 120, y - 4, M.right, y - 4);
+    y += 1.5;
+    text(doc, 'Balance to complete', M.left + 5, y, { size: 9.5, color: INK, style: 'bold' });
     text(doc, formatCurrency(total), M.right, y, { size: 9.5, color: INK, style: 'bold', align: 'right' });
-    y += 8;
+    y += 10;
   }
 
   const singleEnd = done.length && done.every((r) => r.charge.periodEnd === done[0].charge.periodEnd)

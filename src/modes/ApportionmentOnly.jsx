@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, FileDown, Calculator, Building2, CalendarDays, PoundSterling, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import ApportionmentPreview from '../components/ApportionmentPreview';
+import Brand from '../components/Brand';
 import { downloadApportionmentOnly } from '../lib/pdf';
 
 // Brand colors extracted from Pinnacle logo
@@ -264,24 +265,7 @@ export default function ApportionmentOnly({ onHome }) {
           alignItems: 'center',
           justifyContent: 'space-between',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
-              width: 40,
-              height: 40,
-              background: `linear-gradient(135deg, ${colors.burgundy} 0%, ${colors.rose} 100%)`,
-              borderRadius: 8,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontWeight: 700,
-              fontSize: 20,
-            }}>P</div>
-            <div>
-              <div style={{ fontWeight: 600, color: colors.burgundy, fontSize: 16 }}>Pinnacle Property Lawyers</div>
-              <div style={{ fontSize: 12, color: '#888' }}>Apportionment Calculator</div>
-            </div>
-          </div>
+          <Brand label="Apportionment Calculator" />
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {onHome && (
               <button

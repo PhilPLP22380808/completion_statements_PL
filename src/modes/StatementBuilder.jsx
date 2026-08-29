@@ -8,6 +8,7 @@ import {
 } from '../components/fields';
 import ChargesEditor from '../components/ChargesEditor';
 import LedgerPreview from '../components/LedgerPreview';
+import Brand from '../components/Brand';
 import { newStatement, newLine, computeStatement } from '../lib/statement';
 import { downloadCompletionSet } from '../lib/pdf';
 import {
@@ -63,13 +64,7 @@ export default function StatementBuilder({ matterType, onHome }) {
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #faf8f8 0%, #f5f0f1 100%)', fontFamily: "'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
       <header style={{ background: 'white', borderBottom: `3px solid ${colors.burgundy}`, padding: '16px 24px', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 8px rgba(114,47,55,0.08)' }}>
         <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 40, height: 40, background: `linear-gradient(135deg, ${colors.burgundy} 0%, ${colors.rose} 100%)`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: 20 }}>P</div>
-            <div>
-              <div style={{ fontWeight: 600, color: colors.burgundy, fontSize: 16 }}>Pinnacle Property Lawyers</div>
-              <div style={{ fontSize: 12, color: '#888' }}>{isPurchase ? 'Purchase' : 'Sale'} Completion Statement</div>
-            </div>
-          </div>
+          <Brand label={`${isPurchase ? 'Purchase' : 'Sale'} Completion Statement`} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button onClick={onHome} style={btnGhost}><ArrowLeft size={16} /> Change task</button>
             <button onClick={resetAll} style={btnGhost}>Clear</button>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calculator, Home, ShoppingCart, ArrowLeftRight, FileText } from 'lucide-react';
 import { colors } from '../theme';
+import Brand from '../components/Brand';
 
 const options = [
   { id: 'apportionment', icon: Calculator, title: 'Apportionment statement only' },
@@ -21,17 +22,8 @@ export default function Wizard({ onPick }) {
         borderBottom: `3px solid ${colors.burgundy}`,
         padding: '16px 24px',
       }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 40, height: 40,
-            background: `linear-gradient(135deg, ${colors.burgundy} 0%, ${colors.rose} 100%)`,
-            borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'white', fontWeight: 700, fontSize: 20,
-          }}>P</div>
-          <div>
-            <div style={{ fontWeight: 600, color: colors.burgundy, fontSize: 16 }}>Pinnacle Property Lawyers</div>
-            <div style={{ fontSize: 12, color: '#888' }}>Completion Statement Builder</div>
-          </div>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <Brand label="Completion Statement Builder" />
         </div>
       </header>
 

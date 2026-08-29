@@ -14,9 +14,12 @@ export const colors = {
   negative: '#dc2626',
 };
 
-// Firm details, printed on outward-facing statements
+// Firm details, printed on outward-facing statements.
+// `name` is the trading name used in the branding; `legalName` is the registered
+// company name used in the formal regulatory statement.
 export const firm = {
-  name: 'Pinnacle Property Lawyers',
+  name: 'Pinnacle Law',
+  legalName: 'Pinnacle Property Lawyers',
   addressLines: ['1 King William Street', 'London', 'EC4N 7BJ'],
   phone: '020 3948 6660',
   email: 'hello@pinnacle.law',
@@ -24,10 +27,11 @@ export const firm = {
   companyNumber: '14308410',
   licenceNumber: '14497',
   regulatoryNote:
-    'Pinnacle Property Lawyers is a company registered in England and Wales, Company Registration number 14308410. ' +
-    'This firm is authorised and regulated by the Council for Licensed Conveyancers in the conduct of Conveyancing ' +
-    'and Wills and Probate services, Licence number 14497. A list of Directors is available upon request and is open ' +
-    'to inspection at our registered office: 1 King William Street, London, EC4N 7BJ.',
+    'Pinnacle Property Lawyers (trading as Pinnacle Law) is a company registered in England and Wales, ' +
+    'company registration number 14308410. The firm is authorised and regulated by the Council for Licensed ' +
+    'Conveyancers in the conduct of Conveyancing and Wills and Probate services, Licence number 14497. A list ' +
+    'of Directors is available upon request and is open to inspection at our registered office: ' +
+    '1 King William Street, London, EC4N 7BJ.',
 };
 
 export const VAT_RATE = 0.20;
