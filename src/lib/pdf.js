@@ -18,7 +18,7 @@ const RULE = [214, 205, 205];
 
 const M = { left: 20, right: 190, top: 22 };
 const COL = { pay: 143, rec: 190 }; // right edges of the two money columns
-const LINE_H = 6.2; // vertical step for a single ledger row
+const LINE_H = 5.8; // vertical step for a single ledger row
 
 function newDoc() {
   return new jsPDF({ unit: 'mm', format: 'a4' });
@@ -123,7 +123,7 @@ function lineRow(doc, y, label, { payment, receipt, indent = 5, bold = false } =
 }
 
 function pageBreakIfNeeded(doc, y, needed = 24) {
-  if (y + needed > 258) {
+  if (y + needed > 262) {
     doc.addPage();
     return M.top + 6;
   }
@@ -143,10 +143,10 @@ export function buildCompletionStatementPDF(statement, computed) {
   y += 5;
 
   computed.sections.forEach((section, si) => {
-    y = pageBreakIfNeeded(doc, y, 26);
-    if (si > 0) y += 1.5;
+    y = pageBreakIfNeeded(doc, y, 24);
+    if (si > 0) y += 1;
     text(doc, section.title.toUpperCase(), M.left, y, { size: 9, color: BURGUNDY, style: 'bold' });
-    y += 6;
+    y += 5;
 
     if (section.lines.length === 0) {
       text(doc, 'None', M.left + 5, y, { size: 9.5, color: FAINT, style: 'italic' });
@@ -161,14 +161,14 @@ export function buildCompletionStatementPDF(statement, computed) {
     doc.setDrawColor(...RULE);
     doc.setLineWidth(0.3);
     doc.line(M.left + 100, y - 4, COL.rec, y - 4);
-    y += 1.5;
+    y += 1;
     const onPay = section.column === 'payment';
     y = lineRow(doc, y, `${section.title} subtotal`, {
       payment: onPay ? section.subtotal : null,
       receipt: onPay ? null : section.subtotal,
       bold: true,
     });
-    y += 3;
+    y += 2;
   });
 
   // Balance box

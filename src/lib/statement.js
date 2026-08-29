@@ -37,10 +37,9 @@ export function newStatement(matterType) {
     status: 'Draft', // 'Draft' | 'Final'
     price: '',
     contentsPrice: '',
-    priceAdditions: [], // purchase only: SDLT etc.
     costs: [newLine({ label: 'Our Legal Fee', vatable: true })], // fees + disbursements
-    otherCosts: [], // sale "Costs" section: redemption, agent commission, etc.
-    funds: [], // purchase: deposit/mortgage/etc.  sale: receipts
+    otherCosts: [], // "Costs" section: SDLT / redemption / agent commission / etc.
+    funds: [], // receipts: deposit, mortgage advance, funds from sale, POA
     allowances: [],
     includeApportionments: false,
     charges: [newCharge()],
@@ -106,30 +105,33 @@ export function computeStatement(state) {
   const sections = [];
 
   if (isPurchase) {
-    // Section 1: purchase price and additions (all PAYMENTS)
+    // Section 1: purchase price (PAYMENTS) - price and contents only
     const s1 = [];
     if (parseMoney(state.price) !== 0 || state.price !== '') s1.push({ label: 'Basic Purchase Price', payment: parseMoney(state.price) });
     if (parseMoney(state.contentsPrice) > 0) s1.push({ label: 'Contents / Fixtures Price', payment: parseMoney(state.contentsPrice) });
-    state.priceAdditions.forEach((l) => {
-      if (l.label || parseMoney(l.amount)) s1.push({ label: l.label || 'Payment', payment: parseMoney(l.amount) });
-    });
-    // Apportionments the buyer owes the seller (positive) sit here
+    sections.push(makeSection('price', 'Purchase Price', s1, 'payment'));
+
+    // Section 2: our fees and disbursements (PAYMENTS, may carry VAT)
+    const sFees = state.costs
+      .filter((l) => l.label || parseMoney(l.amount))
+      .map((l) => ({ label: l.label || 'Fee', payment: grossOf(l.amount, l.vatable), vatable: l.vatable }));
+    sections.push(makeSection('fees', 'Fees and Disbursements', sFees, 'payment'));
+
+    // Section 3: other costs leaving the completion account (PAYMENTS)
+    const sCosts = (state.otherCosts || [])
+      .filter((l) => l.label || parseMoney(l.amount))
+      .map((l) => ({ label: l.label || 'Cost', payment: grossOf(l.amount, l.vatable), vatable: l.vatable }));
+    // Apportionments the buyer owes the seller (positive)
     Object.entries(appt.byCategory).forEach(([cat, v]) => {
-      if (v > 0) s1.push({ label: `${cat} Apportionment`, payment: v });
+      if (v > 0) sCosts.push({ label: `${cat} Apportionment`, payment: v });
     });
     // Seller-favour allowances increase what the buyer pays
     state.allowances.forEach((a) => {
-      if (a.inFavourOf === 'seller' && parseMoney(a.amount)) s1.push({ label: a.description || 'Allowance in favour of seller', payment: parseMoney(a.amount) });
+      if (a.inFavourOf === 'seller' && parseMoney(a.amount)) sCosts.push({ label: a.description || 'Allowance in favour of seller', payment: parseMoney(a.amount) });
     });
-    sections.push(makeSection('price', 'Purchase Price', s1, 'payment'));
+    sections.push(makeSection('costs', 'Costs', sCosts, 'payment'));
 
-    // Section 2: costs and disbursements (PAYMENTS, may carry VAT)
-    const s2 = state.costs
-      .filter((l) => l.label || parseMoney(l.amount))
-      .map((l) => ({ label: l.label || 'Cost', payment: grossOf(l.amount, l.vatable), vatable: l.vatable }));
-    sections.push(makeSection('costs', 'Costs & Disbursements', s2, 'payment'));
-
-    // Section 3: funds received and allowances (RECEIPTS)
+    // Section 4: receipts and allowances (RECEIPTS)
     const s3 = [];
     state.funds.forEach((l) => {
       if (l.label || parseMoney(l.amount)) s3.push({ label: l.label || 'Receipt', receipt: parseMoney(l.amount) });
@@ -140,9 +142,9 @@ export function computeStatement(state) {
     Object.entries(appt.byCategory).forEach(([cat, v]) => {
       if (v < 0) s3.push({ label: `${cat} Apportionment (allowance)`, receipt: round2(-v) });
     });
-    sections.push(makeSection('funds', 'Funds Received & Allowances', s3, 'receipt'));
+    sections.push(makeSection('receipts', 'Receipts & Allowances', s3, 'receipt'));
 
-    const total = round2(sections[0].subtotal + sections[1].subtotal - sections[2].subtotal);
+    const total = round2(sections[0].subtotal + sections[1].subtotal + sections[2].subtotal - sections[3].subtotal);
     return finalise(sections, total, /* positiveMeans */ 'dueFromClient');
   }
 

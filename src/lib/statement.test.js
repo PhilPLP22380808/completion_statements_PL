@@ -1,24 +1,27 @@
 import { newStatement, newLine, computeStatement, newLinked, computeLinked } from './statement';
 
 // Reproduces the firm's real "Purchase Completion Statement (12)", Crosby.
+// Purchase statement has 4 sections: price, fees & disbursements, costs, receipts.
 test('purchase statement totals match a real worked example', () => {
   const s = {
     ...newStatement('purchase'),
     price: '290000',
-    priceAdditions: [newLine({ label: 'Land Registration Fee', amount: '150' })],
     costs: [
       newLine({ label: 'Our Legal Fee', amount: '1795', vatable: true }),   // 1795 + VAT = 2154
       newLine({ label: 'Search Pack Fee', amount: '245', vatable: true }),  // 245 + VAT = 294
     ],
+    otherCosts: [newLine({ label: 'Land Registration Fee', amount: '150' })],
     funds: [
       newLine({ label: 'Mortgage Advance', amount: '275500' }),
       newLine({ label: 'Deposit', amount: '14500' }),
     ],
   };
   const c = computeStatement(s);
-  expect(c.sections[0].subtotal).toBeCloseTo(290150, 2);
+  expect(c.sections.map((x) => x.title)).toEqual(['Purchase Price', 'Fees and Disbursements', 'Costs', 'Receipts & Allowances']);
+  expect(c.sections[0].subtotal).toBeCloseTo(290000, 2);
   expect(c.sections[1].subtotal).toBeCloseTo(2448, 2);
-  expect(c.sections[2].subtotal).toBeCloseTo(290000, 2);
+  expect(c.sections[2].subtotal).toBeCloseTo(150, 2);
+  expect(c.sections[3].subtotal).toBeCloseTo(290000, 2);
   expect(c.total).toBeCloseTo(2598, 2);
   expect(c.direction).toBe('dueFromClient');
 });
@@ -55,7 +58,7 @@ test('purchase: buyer-favour allowance reduces the balance; seller-favour increa
   expect(sellerFav.total).toBeCloseTo(400000 + 750, 2);
 });
 
-test('apportionments fold into the purchase price section', () => {
+test('apportionments fold into the purchase Costs section', () => {
   const s = {
     ...newStatement('purchase'),
     price: '300000',
@@ -68,7 +71,8 @@ test('apportionments fold into the purchase price section', () => {
     }],
   };
   const c = computeStatement(s);
-  const scLine = c.sections[0].lines.find((l) => l.label === 'Service Charge Apportionment');
+  const costs = c.sections.find((x) => x.title === 'Costs');
+  const scLine = costs.lines.find((l) => l.label === 'Service Charge Apportionment');
   expect(scLine).toBeTruthy();
   expect(scLine.payment).toBeCloseTo(603.30, 2);
   expect(c.total).toBeCloseTo(300000 + 603.30, 2);
@@ -87,7 +91,8 @@ test('linked deal: net sale proceeds flow into the purchase', () => {
   expect(c.sale.direction).toBe('owedToClient');
   expect(c.netProceeds).toBeCloseTo(430000 - 1914, 2); // 428,086
 
-  const proceeds = c.purchase.sections[2].lines.find((l) => l.label === 'Net sale proceeds');
+  const receipts = c.purchase.sections.find((x) => x.title === 'Receipts & Allowances');
+  const proceeds = receipts.lines.find((l) => l.label === 'Net sale proceeds');
   expect(proceeds).toBeTruthy();
   expect(proceeds.receipt).toBeCloseTo(428086, 2);
 

@@ -1,16 +1,18 @@
 import React from 'react';
 import { PoundSterling, Receipt, Wallet, CalendarDays, Scale, Building2 } from 'lucide-react';
-import { colors, inputStyle, labelStyle } from '../theme';
+import { colors, inputStyle } from '../theme';
 import { TextInput, MoneyInput, Checkbox, DeleteButton, AddButton, QuickAdd, Field, SectionCard, AllowanceDatalist, ALLOWANCE_LIST_ID } from './fields';
 import ChargesEditor from './ChargesEditor';
 import { newLine } from '../lib/statement';
-import { purchasePriceAdditions, purchaseCosts, purchaseFunds, saleFees, saleCostItems, saleReceipts, ALLOWANCE_DESCRIPTIONS } from '../lib/catalog';
+import { purchaseFees, purchaseCostItems, purchaseFunds, saleFees, saleCostItems, saleReceipts, ALLOWANCE_DESCRIPTIONS } from '../lib/catalog';
 
 // All the money sections for one statement. `state` is a statement object,
 // `onChange(patch)` merges a partial update. `completionDate` is passed in so a
 // linked deal can share one date across both sides.
 export default function StatementForm({ state, onChange, completionDate }) {
   const isPurchase = state.matterType === 'purchase';
+  const feesCatalog = isPurchase ? purchaseFees : saleFees;
+  const costsCatalog = isPurchase ? purchaseCostItems : saleCostItems;
   const fundsCatalog = isPurchase ? purchaseFunds : saleReceipts;
   const set = onChange;
 
@@ -22,11 +24,14 @@ export default function StatementForm({ state, onChange, completionDate }) {
   const costs = editList('costs');
   const otherCosts = editList('otherCosts');
   const funds = editList('funds');
-  const additions = editList('priceAdditions');
 
   const addAllowance = () => set({ allowances: [...state.allowances, { id: newLine().id, description: '', amount: '', inFavourOf: 'buyer' }] });
   const updAllowance = (id, patch) => set({ allowances: state.allowances.map((a) => (a.id === id ? { ...a, ...patch } : a)) });
   const rmAllowance = (id) => set({ allowances: state.allowances.filter((a) => a.id !== id) });
+
+  const costsHint = isPurchase
+    ? 'SDLT, Land Registry fee, notice fees, indemnity premiums, and anything else leaving the completion account.'
+    : 'Mortgage redemption, estate agent commission, landlord fees, and anything else leaving the completion account.';
 
   return (
     <>
@@ -35,44 +40,24 @@ export default function StatementForm({ state, onChange, completionDate }) {
           <Field label={isPurchase ? 'Basic purchase price (£)' : 'Basic sale price (£)'}><MoneyInput value={state.price} onChange={(v) => set({ price: v })} /></Field>
           <Field label="Contents / fixtures price (£)"><MoneyInput value={state.contentsPrice} onChange={(v) => set({ contentsPrice: v })} /></Field>
         </div>
-
-        {isPurchase && (
-          <div style={{ marginTop: 18 }}>
-            <div style={{ ...labelStyle, marginBottom: 8 }}>Additions to the price (SDLT, Land Registry fee, notice fees...)</div>
-            <LineList lines={state.priceAdditions} onUpdate={additions.update} onRemove={additions.remove} showVat={false} />
-            <div style={{ marginTop: 10 }}>
-              <QuickAdd catalog={purchasePriceAdditions} existingLabels={state.priceAdditions.map((l) => l.label)} onAdd={additions.add} placeholder="Add an addition..." />
-            </div>
-          </div>
-        )}
       </SectionCard>
 
-      {isPurchase ? (
-        <SectionCard icon={Receipt} title="Costs & disbursements">
-          <LineList lines={state.costs} onUpdate={costs.update} onRemove={costs.remove} showVat />
-          <div style={{ marginTop: 10 }}>
-            <QuickAdd catalog={purchaseCosts} existingLabels={state.costs.map((l) => l.label)} onAdd={costs.add} placeholder="Add a cost or disbursement..." />
-          </div>
-        </SectionCard>
-      ) : (
-        <>
-          <SectionCard icon={Receipt} title="Fees and disbursements">
-            <LineList lines={state.costs} onUpdate={costs.update} onRemove={costs.remove} showVat />
-            <div style={{ marginTop: 10 }}>
-              <QuickAdd catalog={saleFees} existingLabels={state.costs.map((l) => l.label)} onAdd={costs.add} placeholder="Add a fee or disbursement..." />
-            </div>
-          </SectionCard>
-          <SectionCard icon={Building2} title="Costs">
-            {(state.otherCosts || []).length === 0 && <div style={{ color: colors.faint, fontSize: 13, fontStyle: 'italic' }}>Mortgage redemption, estate agent commission, landlord fees, and anything else leaving the completion account.</div>}
-            <LineList lines={state.otherCosts || []} onUpdate={otherCosts.update} onRemove={otherCosts.remove} showVat />
-            <div style={{ marginTop: 10 }}>
-              <QuickAdd catalog={saleCostItems} existingLabels={(state.otherCosts || []).map((l) => l.label)} onAdd={otherCosts.add} placeholder="Add a cost..." />
-            </div>
-          </SectionCard>
-        </>
-      )}
+      <SectionCard icon={Receipt} title="Fees and disbursements">
+        <LineList lines={state.costs} onUpdate={costs.update} onRemove={costs.remove} showVat />
+        <div style={{ marginTop: 10 }}>
+          <QuickAdd catalog={feesCatalog} existingLabels={state.costs.map((l) => l.label)} onAdd={costs.add} placeholder="Add a fee or disbursement..." />
+        </div>
+      </SectionCard>
 
-      <SectionCard icon={Wallet} title={isPurchase ? 'Funds received' : 'Receipts'}>
+      <SectionCard icon={Building2} title="Costs">
+        {(state.otherCosts || []).length === 0 && <div style={{ color: colors.faint, fontSize: 13, fontStyle: 'italic' }}>{costsHint}</div>}
+        <LineList lines={state.otherCosts || []} onUpdate={otherCosts.update} onRemove={otherCosts.remove} showVat />
+        <div style={{ marginTop: 10 }}>
+          <QuickAdd catalog={costsCatalog} existingLabels={(state.otherCosts || []).map((l) => l.label)} onAdd={otherCosts.add} placeholder="Add a cost..." />
+        </div>
+      </SectionCard>
+
+      <SectionCard icon={Wallet} title="Receipts">
         <LineList lines={state.funds} onUpdate={funds.update} onRemove={funds.remove} showVat={false} />
         <div style={{ marginTop: 10 }}>
           <QuickAdd catalog={fundsCatalog} existingLabels={state.funds.map((l) => l.label)} onAdd={funds.add} placeholder="Add a receipt..." />
