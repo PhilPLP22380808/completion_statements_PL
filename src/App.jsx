@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Wizard from './modes/Wizard';
 import ApportionmentOnly from './modes/ApportionmentOnly';
+import StatementBuilder from './modes/StatementBuilder';
 import ComingSoon from './modes/ComingSoon';
 
 export default function App() {
@@ -11,9 +12,9 @@ export default function App() {
     case 'apportionment':
       return <ApportionmentOnly onHome={goHome} />;
     case 'purchase':
-      return <ComingSoon title="Purchase completion statement" onHome={goHome} />;
+      return <StatementBuilder matterType="purchase" onHome={goHome} />;
     case 'sale':
-      return <ComingSoon title="Sale completion statement" onHome={goHome} />;
+      return <StatementBuilder matterType="sale" onHome={goHome} />;
     case 'linked':
       return <ComingSoon title="Linked sale & purchase" onHome={goHome} />;
     default:
