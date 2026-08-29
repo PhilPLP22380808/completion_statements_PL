@@ -1,12 +1,13 @@
 import React from 'react';
-import { Calculator, Home, ShoppingCart, ArrowLeftRight, FileText } from 'lucide-react';
+import { Calculator, ArrowLeftRight, FileText } from 'lucide-react';
 import { colors } from '../theme';
 import Brand from '../components/Brand';
+import { MoneyIntoHouse, MoneyOutOfHouse } from '../components/HomeIcons';
 
 const options = [
   { id: 'apportionment', icon: Calculator, title: 'Apportionment statement only' },
-  { id: 'purchase', icon: Home, title: 'Purchase completion statement' },
-  { id: 'sale', icon: ShoppingCart, title: 'Sale completion statement' },
+  { id: 'purchase', icon: MoneyIntoHouse, title: 'Purchase completion statement' },
+  { id: 'sale', icon: MoneyOutOfHouse, title: 'Sale completion statement' },
   { id: 'linked', icon: ArrowLeftRight, title: 'Linked sale and purchase' },
 ];
 
