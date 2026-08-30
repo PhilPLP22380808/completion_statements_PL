@@ -5,7 +5,7 @@ import { TextInput, DateInput, Field, SectionCard } from '../components/fields';
 import StatementForm from '../components/StatementForm';
 import LedgerPreview from '../components/LedgerPreview';
 import Brand from '../components/Brand';
-import { newLinked, computeLinked, normalizeStatus } from '../lib/statement';
+import { newLinked, computeLinked, normalizeStatus, isBlankLinked } from '../lib/statement';
 import { downloadLinkedSet } from '../lib/pdf';
 import { addHistoryEntry } from '../lib/history';
 import { formatCurrency, formatShortDate } from '../lib/format';
@@ -20,6 +20,7 @@ function loadState() {
       const parsed = JSON.parse(saved);
       const merged = { ...base, ...parsed, sale: { ...base.sale, ...parsed.sale }, purchase: { ...base.purchase, ...parsed.purchase } };
       merged.status = normalizeStatus(merged.status);
+      if (isBlankLinked(merged)) return newLinked();
       return merged;
     }
   } catch (e) { /* ignore */ }

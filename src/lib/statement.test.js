@@ -1,4 +1,4 @@
-import { newStatement, newLine, computeStatement, newLinked, computeLinked } from './statement';
+import { newStatement, newLine, computeStatement, newLinked, computeLinked, isBlankStatement, isBlankLinked } from './statement';
 
 // Reproduces the firm's real "Purchase Completion Statement (12)", Crosby.
 // Purchase statement has 4 sections: price, fees & disbursements, costs, receipts.
@@ -104,4 +104,14 @@ test('linked deal: net sale proceeds flow into the purchase', () => {
 
   // purchase: 429,950 + (1795 + VAT 359) - 428,086 net proceeds
   expect(c.purchase.total).toBeCloseTo(429950 + 2154 - 428086, 2);
+});
+
+test('isBlankStatement: fresh templates are blank, any real entry is not', () => {
+  expect(isBlankStatement(newStatement('purchase'))).toBe(true);
+  expect(isBlankStatement(newStatement('sale'))).toBe(true);
+  expect(isBlankStatement({ ...newStatement('purchase'), price: '295000' })).toBe(false);
+  expect(isBlankStatement({ ...newStatement('purchase'), ourRef: 'AB/P/Smith' })).toBe(false);
+  expect(isBlankStatement({ ...newStatement('sale'), costs: [newLine({ label: 'Our Legal Fee', amount: '1595' })] })).toBe(false);
+  expect(isBlankLinked(newLinked())).toBe(true);
+  expect(isBlankLinked({ ...newLinked(), clients: 'Jane Smith' })).toBe(false);
 });

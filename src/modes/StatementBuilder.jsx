@@ -5,7 +5,7 @@ import { TextInput, DateInput, Field, SectionCard } from '../components/fields';
 import StatementForm from '../components/StatementForm';
 import LedgerPreview from '../components/LedgerPreview';
 import Brand from '../components/Brand';
-import { newStatement, computeStatement, normalizeStatus } from '../lib/statement';
+import { newStatement, computeStatement, normalizeStatus, isBlankStatement } from '../lib/statement';
 import { downloadCompletionSet } from '../lib/pdf';
 import { addHistoryEntry } from '../lib/history';
 import { formatCurrency, formatShortDate } from '../lib/format';
@@ -18,6 +18,8 @@ function loadState(matterType) {
     if (saved) {
       const merged = { ...newStatement(matterType), ...JSON.parse(saved), matterType };
       merged.status = normalizeStatus(merged.status);
+      // A leftover blank autosave shouldn't shadow the current template.
+      if (isBlankStatement(merged)) return newStatement(matterType);
       return merged;
     }
   } catch (e) { /* ignore */ }

@@ -48,7 +48,6 @@ export default function StatementForm({ state, onChange, completionDate }) {
       <ItemSection
         icon={Receipt}
         title="Fees and disbursements"
-        listId="fees-list"
         lines={state.costs || []}
         list={costs}
         showVat

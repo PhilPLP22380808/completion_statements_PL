@@ -52,6 +52,29 @@ export function newStatement(matterType) {
 // Only Draft or Final are valid; coerce anything else (e.g. an old "Provisional").
 export const normalizeStatus = (s) => (s === 'Final' ? 'Final' : 'Draft');
 
+const anyAmount = (lines) => (lines || []).some((l) => parseMoney(l.amount) !== 0);
+
+// True when a statement holds no real work: no matter details, no figures, no
+// allowances, no apportionment data. Used to discard a leftover blank autosave
+// so a fresh statement starts from the current template.
+export function isBlankStatement(s) {
+  if (!s) return true;
+  if (s.clients || s.address || s.ourRef || s.completionDate) return false;
+  if (parseMoney(s.price) || parseMoney(s.contentsPrice)) return false;
+  if (anyAmount(s.costs) || anyAmount(s.otherCosts) || anyAmount(s.funds)) return false;
+  if ((s.allowances || []).some((a) => a.description || parseMoney(a.amount))) return false;
+  if (s.includeApportionments && (s.charges || []).some(
+    (c) => c.periodStart || c.periodEnd || parseMoney(c.totalCharge) || (c.accountBalance !== '' && c.accountBalance != null),
+  )) return false;
+  return true;
+}
+
+export function isBlankLinked(state) {
+  if (!state) return true;
+  if (state.clients || state.completionDate) return false;
+  return isBlankStatement(state.sale) && isBlankStatement(state.purchase);
+}
+
 // A linked sale-and-purchase: shared client/date/status, plus a sale and a
 // purchase sub-statement. The net sale balance feeds the purchase automatically.
 export function newLinked() {
