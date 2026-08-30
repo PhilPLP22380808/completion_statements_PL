@@ -50,6 +50,12 @@ test('new statements default to Draft', () => {
   expect(newStatement('purchase').status).toBe('Draft');
 });
 
+test('fees section is prefilled: purchase gets legal fee + search pack, sale just the legal fee', () => {
+  expect(newStatement('purchase').costs.map((l) => l.label)).toEqual(['Our Legal Fee', 'Search Pack Fee']);
+  expect(newStatement('sale').costs.map((l) => l.label)).toEqual(['Our Legal Fee']);
+  expect(newStatement('purchase').costs.every((l) => l.vatable)).toBe(true);
+});
+
 test('purchase: buyer-favour allowance reduces the balance; seller-favour increases it', () => {
   const base = { ...newStatement('purchase'), price: '400000' };
   const buyerFav = computeStatement({ ...base, allowances: [{ id: 'a', description: 'SC credit', amount: '750', inFavourOf: 'buyer' }] });

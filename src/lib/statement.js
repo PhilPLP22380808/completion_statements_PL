@@ -37,7 +37,10 @@ export function newStatement(matterType) {
     status: 'Draft', // 'Draft' | 'Final'
     price: '',
     contentsPrice: '',
-    costs: [newLine({ label: 'Our Legal Fee', vatable: true })], // fees + disbursements
+    // Fees section: prefilled with the fees we always charge, then free-text rows.
+    costs: matterType === 'purchase'
+      ? [newLine({ label: 'Our Legal Fee', vatable: true }), newLine({ label: 'Search Pack Fee', vatable: true })]
+      : [newLine({ label: 'Our Legal Fee', vatable: true })],
     otherCosts: [], // "Costs" section: SDLT / redemption / agent commission / etc.
     funds: [], // receipts: deposit, mortgage advance, funds from sale, POA
     allowances: [],

@@ -4,7 +4,7 @@ import { colors, inputStyle } from '../theme';
 import { TextInput, MoneyInput, Checkbox, DeleteButton, AddButton, Field, SectionCard, Datalist } from './fields';
 import ChargesEditor from './ChargesEditor';
 import { newLine } from '../lib/statement';
-import { purchaseFees, purchaseCostItems, purchaseFunds, saleFees, saleCostItems, saleReceipts, ALLOWANCE_DESCRIPTIONS } from '../lib/catalog';
+import { purchaseCostItems, purchaseFunds, saleCostItems, saleReceipts, ALLOWANCE_DESCRIPTIONS } from '../lib/catalog';
 
 // All the money sections for one statement. `state` is a statement object,
 // `onChange(patch)` merges a partial update. `completionDate` is passed in so a
@@ -15,7 +15,6 @@ import { purchaseFees, purchaseCostItems, purchaseFunds, saleFees, saleCostItems
 // an amount, an optional +VAT toggle, and a delete button.
 export default function StatementForm({ state, onChange, completionDate }) {
   const isPurchase = state.matterType === 'purchase';
-  const feesCatalog = isPurchase ? purchaseFees : saleFees;
   const costsCatalog = isPurchase ? purchaseCostItems : saleCostItems;
   const fundsCatalog = isPurchase ? purchaseFunds : saleReceipts;
   const set = onChange;
@@ -52,10 +51,9 @@ export default function StatementForm({ state, onChange, completionDate }) {
         listId="fees-list"
         lines={state.costs || []}
         list={costs}
-        catalog={feesCatalog}
         showVat
         defaultVat
-        emptyHint="Our legal fee and the disbursements we incur (searches, bank transfer, Land Registry office copies)."
+        emptyHint="Our legal fee and any disbursements. Add a line and type it in."
       />
 
       <ItemSection
@@ -118,10 +116,12 @@ export default function StatementForm({ state, onChange, completionDate }) {
 }
 
 // One list section: header Add button, empty hint, and description / amount /
-// (+VAT) / delete rows. Picking a known label from the suggestions list applies
-// that item's usual VAT treatment; it can still be toggled per line.
-function ItemSection({ icon, title, listId, lines, list, catalog, showVat = false, defaultVat = false, emptyHint }) {
+// (+VAT) / delete rows. When a catalog is given, picking a known label from the
+// suggestions list applies that item's usual VAT treatment (still overridable);
+// with no catalog the description is plain free text.
+function ItemSection({ icon, title, listId, lines, list, catalog = [], showVat = false, defaultVat = false, emptyHint }) {
   const options = catalog.map((c) => c.label);
+  const hasSuggestions = options.length > 0;
   const cols = showVat ? '2fr 1fr auto auto' : '2fr 1fr auto';
 
   const onLabelChange = (id, label) => {
@@ -132,12 +132,12 @@ function ItemSection({ icon, title, listId, lines, list, catalog, showVat = fals
   return (
     <SectionCard icon={icon} title={title} action={<AddButton onClick={() => list.add(showVat ? { vatable: defaultVat } : {})}>Add</AddButton>}>
       {lines.length === 0 && <div style={hintStyle}>{emptyHint}</div>}
-      <Datalist id={listId} options={options} />
+      {hasSuggestions && <Datalist id={listId} options={options} />}
       <div style={{ display: 'grid', gap: 10 }}>
         {lines.map((l) => (
           <div key={l.id} style={rowStyle(cols)}>
             <Field label="Description">
-              <TextInput list={listId} value={l.label} onChange={(e) => onLabelChange(l.id, e.target.value)} placeholder="Description" style={{ textAlign: 'left', background: 'white' }} />
+              <TextInput list={hasSuggestions ? listId : undefined} value={l.label} onChange={(e) => onLabelChange(l.id, e.target.value)} placeholder="Description" style={{ textAlign: 'left', background: 'white' }} />
             </Field>
             <Field label="Amount (£)">
               <MoneyInput value={l.amount} onChange={(v) => list.update(l.id, { amount: v })} style={{ background: 'white' }} />
