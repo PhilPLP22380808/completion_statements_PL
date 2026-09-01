@@ -4,6 +4,26 @@
 
 import { round2, parseMoney, formatMonthYear } from './format';
 import { grossOf, summariseApportionments } from './calc';
+import { FIXED_FEE_NET } from '../theme';
+
+const isSdlt = (label) => /stamp duty land tax|^sdlt/i.test(label || '');
+const isEstateAgent = (label) => /estate agent/i.test(label || '');
+
+// The effective net amount for a line. An estate agent commission line entered
+// as a percentage is worked out from the sale price.
+export function effectiveNet(line, salePrice) {
+  if (isEstateAgent(line.label) && parseMoney(line.pct) > 0) {
+    return round2(parseMoney(salePrice) * parseMoney(line.pct) / 100);
+  }
+  return parseMoney(line.amount);
+}
+
+// A short note printed under a line: the SDLT rate basis, or "X% of sale price".
+export function lineNote(line, salePrice) {
+  if (isEstateAgent(line.label) && parseMoney(line.pct) > 0) return `${line.pct}% of sale price`;
+  if (isSdlt(line.label) && line.sdltBasis) return line.sdltBasis;
+  return undefined;
+}
 
 let seq = 0;
 const uid = () => `l${Date.now().toString(36)}${(seq++).toString(36)}`;
@@ -37,10 +57,13 @@ export function newStatement(matterType) {
     status: 'Draft', // 'Draft' | 'Final'
     price: '',
     contentsPrice: '',
-    // Fees section: prefilled with the fees we always charge, then free-text rows.
-    costs: matterType === 'purchase'
-      ? [newLine({ label: 'Our Legal Fee', vatable: true }), newLine({ label: 'Search Pack Fee', vatable: true })]
-      : [newLine({ label: 'Our Legal Fee', vatable: true })],
+    // Fees section: prefilled with our fixed legal fee (net, VAT applies). The
+    // lawyer amends it on the exceptional matters; VAT is pre-ticked here only.
+    costs: [newLine({
+      label: 'Our Legal Fee',
+      amount: FIXED_FEE_NET[matterType === 'purchase' ? 'purchase' : 'sale'].toFixed(2),
+      vatable: true,
+    })],
     otherCosts: [], // "Costs" section: SDLT / redemption / agent commission / etc.
     funds: [], // receipts: deposit, mortgage advance, funds from sale, POA
     allowances: [],
@@ -52,27 +75,42 @@ export function newStatement(matterType) {
 // Only Draft or Final are valid; coerce anything else (e.g. an old "Provisional").
 export const normalizeStatus = (s) => (s === 'Final' ? 'Final' : 'Draft');
 
-const anyAmount = (lines) => (lines || []).some((l) => parseMoney(l.amount) !== 0);
+const hasChargeData = (c) => c.periodStart || c.periodEnd || parseMoney(c.totalCharge)
+  || (c.accountBalance !== '' && c.accountBalance != null);
 
-// True when a statement holds no real work: no matter details, no figures, no
-// allowances, no apportionment data. Used to discard a leftover blank autosave
-// so a fresh statement starts from the current template.
-export function isBlankStatement(s) {
+// A line list is "untouched" if it is empty, matches the given template (same
+// labels and amounts), or is just a legacy empty "Our Legal Fee" row.
+function listIsUntouched(lines, template) {
+  const l = lines || [];
+  if (l.length === 0) return true;
+  if (l.length === 1 && l[0].label === 'Our Legal Fee' && !parseMoney(l[0].amount) && !l[0].pct) return true;
+  if (l.length !== template.length) return false;
+  return l.every((x, i) => (x.label || '') === (template[i].label || '')
+    && String(x.amount || '') === String(template[i].amount || ''));
+}
+
+// True when a statement holds no real work beyond the template: no matter
+// details, no figures the lawyer entered, no allowances, no apportionment data.
+// Used to discard a leftover blank autosave so a fresh statement starts from the
+// current template.
+export function isBlankStatement(s, matterType) {
   if (!s) return true;
+  const mt = matterType || s.matterType || 'purchase';
   if (s.clients || s.address || s.ourRef || s.completionDate) return false;
   if (parseMoney(s.price) || parseMoney(s.contentsPrice)) return false;
-  if (anyAmount(s.costs) || anyAmount(s.otherCosts) || anyAmount(s.funds)) return false;
   if ((s.allowances || []).some((a) => a.description || parseMoney(a.amount))) return false;
-  if (s.includeApportionments && (s.charges || []).some(
-    (c) => c.periodStart || c.periodEnd || parseMoney(c.totalCharge) || (c.accountBalance !== '' && c.accountBalance != null),
-  )) return false;
+  if (s.includeApportionments && (s.charges || []).some(hasChargeData)) return false;
+  const tmpl = newStatement(mt);
+  if (!listIsUntouched(s.costs, tmpl.costs)) return false;
+  if (!listIsUntouched(s.otherCosts, tmpl.otherCosts)) return false;
+  if (!listIsUntouched(s.funds, tmpl.funds)) return false;
   return true;
 }
 
 export function isBlankLinked(state) {
   if (!state) return true;
   if (state.clients || state.completionDate) return false;
-  return isBlankStatement(state.sale) && isBlankStatement(state.purchase);
+  return isBlankStatement(state.sale, 'sale') && isBlankStatement(state.purchase, 'purchase');
 }
 
 // A linked sale-and-purchase: shared client/date/status, plus a sale and a
@@ -120,6 +158,19 @@ function chargeForCalc(charge) {
   return { ...charge, accountBalance: charge.accountBalance === '' ? '' : chargeBalanceValue(charge) };
 }
 
+const lineHasContent = (l) => l.label || parseMoney(l.amount) || parseMoney(l.pct);
+
+// Build a "Costs" section payment line, resolving an estate agent percentage and
+// attaching a sub-note (SDLT basis, or "X% of sale price").
+function costLine(l, salePrice) {
+  return {
+    label: l.label || 'Cost',
+    payment: grossOf(effectiveNet(l, salePrice), l.vatable),
+    vatable: l.vatable,
+    note: lineNote(l, salePrice),
+  };
+}
+
 /**
  * Build the ledger. Returns:
  *  { sections: [{ key, title, lines: [{label, payment, receipt}], subtotal, column }],
@@ -148,8 +199,8 @@ export function computeStatement(state) {
 
     // Section 3: other costs leaving the completion account (PAYMENTS)
     const sCosts = (state.otherCosts || [])
-      .filter((l) => l.label || parseMoney(l.amount))
-      .map((l) => ({ label: l.label || 'Cost', payment: grossOf(l.amount, l.vatable), vatable: l.vatable }));
+      .filter(lineHasContent)
+      .map((l) => costLine(l, state.price));
     // Apportionments the buyer owes the seller (positive)
     Object.entries(appt.byCategory).forEach(([cat, v]) => {
       if (v > 0) sCosts.push({ label: `${cat} Apportionment`, payment: v });
@@ -192,8 +243,8 @@ export function computeStatement(state) {
 
   // Section 3: other costs leaving the completion account (PAYMENTS)
   const sCosts = (state.otherCosts || [])
-    .filter((l) => l.label || parseMoney(l.amount))
-    .map((l) => ({ label: l.label || 'Cost', payment: grossOf(l.amount, l.vatable), vatable: l.vatable }));
+    .filter(lineHasContent)
+    .map((l) => costLine(l, state.price));
   state.allowances.forEach((a) => {
     if (a.inFavourOf === 'buyer' && parseMoney(a.amount)) sCosts.push({ label: a.description || 'Allowance to buyer', payment: parseMoney(a.amount) });
   });

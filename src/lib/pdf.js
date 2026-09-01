@@ -160,6 +160,10 @@ export function buildCompletionStatementPDF(statement, computed) {
       y = pageBreakIfNeeded(doc, y);
       const label = l.vatable ? `${l.label} (incl. VAT)` : l.label;
       y = lineRow(doc, y, label, { payment: l.payment, receipt: l.receipt });
+      if (l.note) {
+        text(doc, l.note, M.left + 8, y - 1.5, { size: 8, color: GREY });
+        y += 4;
+      }
     });
 
     doc.setDrawColor(...RULE);

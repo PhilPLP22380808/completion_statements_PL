@@ -23,6 +23,7 @@ export const purchaseFunds = [
   { label: 'Mortgage Advance' },
   { label: 'Mortgage Cashback' },
   { label: 'Payment on Account' },
+  { label: 'Test Payment' },
   { label: 'Net Sale Proceeds' },
   { label: 'Help to Buy ISA / LISA Bonus' },
   { label: 'Gifted Deposit' },
@@ -44,11 +45,23 @@ export const saleCostItems = [
 // Sale, section 3 receipts / allowances.
 export const saleReceipts = [
   { label: 'Payment on Account' },
+  { label: 'Test Payment' },
   { label: 'Apportionments from Buyer' },
   { label: 'Miscellaneous Receipt' },
 ];
 
 export const APPORTIONMENT_CATEGORIES = ['Service Charge', 'Ground Rent', 'Rent', 'Other'];
+
+// SDLT rate / relief basis, shown on a purchase Stamp Duty Land Tax line.
+export const SDLT_RATE_OPTIONS = [
+  'Standard residential rates',
+  'First-time buyer relief',
+  'Additional property (higher rates)',
+  'Additional property + non-resident surcharge',
+  'Non-resident surcharge',
+  'Non-residential / commercial rates',
+  'Mixed-use rates',
+];
 
 // Common descriptions for the Allowances & adjustments rows. Offered as a
 // type-ahead list; the field stays free text.

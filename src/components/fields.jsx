@@ -23,7 +23,7 @@ export function DateInput(props) {
 }
 
 // Money input: shows thousands separators, calls onChange with the raw numeric string.
-export function MoneyInput({ value, onChange, placeholder = '0.00', style, allowNegative = false }) {
+export function MoneyInput({ value, onChange, placeholder = '0.00', style, allowNegative = false, disabled = false }) {
   const display = value === '' || value === null || value === undefined ? '' : formatWithCommas(String(value));
   return (
     <input
@@ -31,12 +31,13 @@ export function MoneyInput({ value, onChange, placeholder = '0.00', style, allow
       inputMode="decimal"
       value={display}
       placeholder={placeholder}
+      disabled={disabled}
       onChange={(e) => {
         let raw = e.target.value.replace(/[^0-9.-]/g, '');
         if (!allowNegative) raw = raw.replace(/-/g, '');
         onChange(raw);
       }}
-      style={{ ...inputStyle, textAlign: 'right', ...style }}
+      style={{ ...inputStyle, textAlign: 'right', ...(disabled ? { color: colors.muted, cursor: 'not-allowed' } : {}), ...style }}
     />
   );
 }

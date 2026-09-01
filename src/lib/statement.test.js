@@ -50,14 +50,22 @@ test('new statements default to Draft', () => {
   expect(newStatement('purchase').status).toBe('Draft');
 });
 
-test('fees section is prefilled: purchase gets legal fee + search pack, sale just the legal fee', () => {
-  expect(newStatement('purchase').costs.map((l) => l.label)).toEqual(['Our Legal Fee', 'Search Pack Fee']);
-  expect(newStatement('sale').costs.map((l) => l.label)).toEqual(['Our Legal Fee']);
-  expect(newStatement('purchase').costs.every((l) => l.vatable)).toBe(true);
+test('fees section is prefilled with the fixed legal fee, net, VAT ticked', () => {
+  const p = newStatement('purchase').costs;
+  const s = newStatement('sale').costs;
+  expect(p).toHaveLength(1);
+  expect(p[0]).toMatchObject({ label: 'Our Legal Fee', amount: '2079.17', vatable: true });
+  expect(s[0]).toMatchObject({ label: 'Our Legal Fee', amount: '1662.50', vatable: true });
+});
+
+test('a manually added fee row defaults to VAT unticked', () => {
+  // newLine (used by the Add button with { vatable: false }) is unticked
+  expect(newLine({ vatable: false }).vatable).toBe(false);
+  expect(newLine().vatable).toBe(false);
 });
 
 test('purchase: buyer-favour allowance reduces the balance; seller-favour increases it', () => {
-  const base = { ...newStatement('purchase'), price: '400000' };
+  const base = { ...newStatement('purchase'), price: '400000', costs: [] };
   const buyerFav = computeStatement({ ...base, allowances: [{ id: 'a', description: 'SC credit', amount: '750', inFavourOf: 'buyer' }] });
   const sellerFav = computeStatement({ ...base, allowances: [{ id: 'a', description: 'Extra', amount: '750', inFavourOf: 'seller' }] });
   expect(buyerFav.total).toBeCloseTo(400000 - 750, 2);
@@ -68,6 +76,7 @@ test('apportionments fold into the purchase Costs section', () => {
   const s = {
     ...newStatement('purchase'),
     price: '300000',
+    costs: [],
     includeApportionments: true,
     completionDate: '2026-07-01',
     charges: [{
@@ -114,4 +123,34 @@ test('isBlankStatement: fresh templates are blank, any real entry is not', () =>
   expect(isBlankStatement({ ...newStatement('sale'), costs: [newLine({ label: 'Our Legal Fee', amount: '1595' })] })).toBe(false);
   expect(isBlankLinked(newLinked())).toBe(true);
   expect(isBlankLinked({ ...newLinked(), clients: 'Jane Smith' })).toBe(false);
+});
+
+test('estate agent commission by percentage of the sale price', () => {
+  const { effectiveNet, lineNote } = require('./statement');
+  const line = { label: 'Estate Agent Commission', pct: '1.25', amount: '' };
+  expect(effectiveNet(line, '400000')).toBeCloseTo(5000, 2);
+  expect(lineNote(line, '400000')).toBe('1.25% of sale price');
+  // a fixed amount, no percentage
+  const fixed = { label: 'Estate Agent Commission', pct: '', amount: '3200' };
+  expect(effectiveNet(fixed, '400000')).toBe(3200);
+  expect(lineNote(fixed, '400000')).toBeUndefined();
+});
+
+test('SDLT basis prints as a note on the line', () => {
+  const { lineNote } = require('./statement');
+  expect(lineNote({ label: 'Stamp Duty Land Tax', sdltBasis: 'First-time buyer relief' })).toBe('First-time buyer relief');
+  expect(lineNote({ label: 'Land Registration Fee', sdltBasis: 'x' })).toBeUndefined();
+});
+
+test('sale statement: agent commission as a percentage feeds the Costs subtotal', () => {
+  const s = {
+    ...newStatement('sale'),
+    price: '500000',
+    costs: [newLine({ label: 'Our Legal Fee', amount: '1662.50', vatable: true })],
+    otherCosts: [newLine({ label: 'Estate Agent Commission', pct: '1.5', amount: '', vatable: false })],
+  };
+  const c = computeStatement(s);
+  const costs = c.sections.find((x) => x.title === 'Costs');
+  expect(costs.subtotal).toBeCloseTo(7500, 2); // 1.5% of 500,000
+  expect(costs.lines[0].note).toBe('1.5% of sale price');
 });

@@ -36,6 +36,14 @@ export const firm = {
 
 export const VAT_RATE = 0.20;
 
+// The firm's standard fixed legal fees, net of VAT (inc VAT: purchase £2,495,
+// sale £1,995). The purchase fee already includes the search package. Prefilled
+// on new statements; the lawyer amends it on the exceptional matters.
+export const FIXED_FEE_NET = {
+  purchase: 2079.17,
+  sale: 1662.50,
+};
+
 export const cardStyle = {
   background: 'white',
   borderRadius: 16,

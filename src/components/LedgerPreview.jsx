@@ -27,10 +27,13 @@ export default function LedgerPreview({ computed, statement, title = 'Client Com
           <div style={{ fontWeight: 600, color: colors.burgundy, marginTop: 12, marginBottom: 4 }}>{s.title}</div>
           {s.lines.length === 0 && <div style={{ color: colors.faint, fontStyle: 'italic', padding: '2px 0' }}>None</div>}
           {s.lines.map((l, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px', gap: 4, padding: '2px 0' }}>
-              <span>{l.label}{l.vatable ? ' (incl. VAT)' : ''}</span>
-              <span style={{ textAlign: 'right' }}>{l.payment ? formatAmount(l.payment) : ''}</span>
-              <span style={{ textAlign: 'right' }}>{l.receipt ? formatAmount(l.receipt) : ''}</span>
+            <div key={i} style={{ padding: '2px 0' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px', gap: 4 }}>
+                <span>{l.label}{l.vatable ? ' (incl. VAT)' : ''}</span>
+                <span style={{ textAlign: 'right' }}>{l.payment ? formatAmount(l.payment) : ''}</span>
+                <span style={{ textAlign: 'right' }}>{l.receipt ? formatAmount(l.receipt) : ''}</span>
+              </div>
+              {l.note && <div style={{ fontSize: 11, color: colors.faint, paddingLeft: 8 }}>{l.note}</div>}
             </div>
           ))}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px', gap: 4, padding: '4px 0', borderTop: `1px solid ${colors.line}`, marginTop: 4, fontWeight: 600 }}>

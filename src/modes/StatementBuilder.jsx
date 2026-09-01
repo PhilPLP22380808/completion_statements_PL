@@ -19,7 +19,7 @@ function loadState(matterType) {
       const merged = { ...newStatement(matterType), ...JSON.parse(saved), matterType };
       merged.status = normalizeStatus(merged.status);
       // A leftover blank autosave shouldn't shadow the current template.
-      if (isBlankStatement(merged)) return newStatement(matterType);
+      if (isBlankStatement(merged, matterType)) return newStatement(matterType);
       return merged;
     }
   } catch (e) { /* ignore */ }
