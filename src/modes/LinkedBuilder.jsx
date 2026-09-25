@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, FileDown, Building2, ShoppingCart, Home, ArrowDown } from 'lucide-react';
+import { ArrowLeft, History, FileDown, Building2, ShoppingCart, Home, ArrowDown } from 'lucide-react';
 import { colors, inputStyle } from '../theme';
 import { TextInput, DateInput, Field, SectionCard } from '../components/fields';
 import StatementForm from '../components/StatementForm';
@@ -27,7 +27,7 @@ function loadState() {
   return newLinked();
 }
 
-export default function LinkedBuilder({ onHome }) {
+export default function LinkedBuilder({ onHome, onHistory }) {
   const [state, setState] = useState(loadState);
 
   useEffect(() => {
@@ -72,6 +72,7 @@ export default function LinkedBuilder({ onHome }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button onClick={onHome} style={btnGhost}><ArrowLeft size={16} /> Change task</button>
             <button onClick={resetAll} style={btnGhost}>Clear</button>
+            <button onClick={onHistory} style={btnGhost}><History size={16} /> Restore previous</button>
             <button onClick={exportPdfs} style={btnPrimary}><FileDown size={18} /> Export PDFs</button>
           </div>
         </div>

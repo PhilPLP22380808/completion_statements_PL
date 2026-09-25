@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Calculator, ArrowLeftRight, FileText, History } from 'lucide-react';
 import { colors } from '../theme';
 import Brand from '../components/Brand';
@@ -12,7 +12,11 @@ const options = [
   { id: 'history', icon: History, title: 'History' },
 ];
 
-export default function Wizard({ onPick }) {
+export default function Wizard({ onContinue, onNew }) {
+  const [pending, setPending] = useState(null);
+  const onPick = (id) => (id === 'history' ? onContinue(id) : setPending(id));
+  const pendingTitle = options.find((o) => o.id === pending)?.title;
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -69,6 +73,33 @@ export default function Wizard({ onPick }) {
           ))}
         </div>
       </main>
+
+      {pending && (
+        <div
+          onClick={() => setPending(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(30,20,22,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, zIndex: 200 }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: 'white', borderRadius: 14, padding: 28, maxWidth: 440, width: '100%', boxShadow: '0 12px 40px rgba(0,0,0,0.25)' }}
+          >
+            <h2 style={{ margin: '0 0 6px', fontSize: 20, color: colors.ink }}>{pendingTitle}</h2>
+            <p style={{ margin: '0 0 22px', color: colors.muted, fontSize: 15 }}>
+              Start a new matter, or carry on with the one you were last working on?
+            </p>
+            <div style={{ display: 'grid', gap: 10 }}>
+              <button onClick={() => { const id = pending; setPending(null); onNew(id); }} style={{ padding: '12px 16px', background: colors.burgundy, color: 'white', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 15, cursor: 'pointer' }}>
+                New matter
+              </button>
+              <button onClick={() => { const id = pending; setPending(null); onContinue(id); }} style={{ padding: '12px 16px', background: 'white', color: colors.burgundy, border: `1px solid ${colors.blush}`, borderRadius: 8, fontWeight: 600, fontSize: 15, cursor: 'pointer' }}>
+                Continue existing matter
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

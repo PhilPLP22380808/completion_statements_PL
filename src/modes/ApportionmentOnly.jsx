@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, FileDown, Calculator, Building2, CalendarDays, PoundSterling, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
+import { Plus, Trash2, FileDown, Calculator, Building2, CalendarDays, PoundSterling, ChevronDown, ChevronUp, ArrowLeft, History } from 'lucide-react';
 import ApportionmentPreview from '../components/ApportionmentPreview';
 import Brand from '../components/Brand';
 import { AllowanceDatalist, ALLOWANCE_LIST_ID } from '../components/fields';
@@ -29,7 +29,14 @@ function loadAppState() {
   return {};
 }
 
-export default function ApportionmentOnly({ onHome }) {
+const secondaryBtn = {
+  display: 'flex', alignItems: 'center', gap: 6,
+  padding: '10px 16px', background: 'white', color: colors.burgundy,
+  border: `1px solid ${colors.blush}`, borderRadius: 8,
+  fontWeight: 600, fontSize: 14, cursor: 'pointer',
+};
+
+export default function ApportionmentOnly({ onHome, onHistory }) {
   const saved = loadAppState();
   const [propertyAddress, setPropertyAddress] = useState(saved.propertyAddress || '');
   const [completionDate, setCompletionDate] = useState(saved.completionDate || '');
@@ -75,6 +82,17 @@ export default function ApportionmentOnly({ onHome }) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ propertyAddress, completionDate, purchasePrice, status, allowances, apportionments }));
     } catch (e) { /* ignore */ }
   }, [propertyAddress, completionDate, purchasePrice, status, allowances, apportionments]);
+
+  const clearAll = () => {
+    if (!window.confirm('Clear this apportionment and start again?')) return;
+    setPropertyAddress('');
+    setCompletionDate('');
+    setPurchasePrice('');
+    setPurchasePriceDisplay('');
+    setStatus('Draft');
+    setAllowances([defaultAllowance()]);
+    setApportionments([defaultCharge()]);
+  };
 
   // Add new allowance
   const addAllowance = () => {
@@ -308,6 +326,10 @@ export default function ApportionmentOnly({ onHome }) {
               >
                 <ArrowLeft size={16} /> Change task
               </button>
+            )}
+            <button onClick={clearAll} style={secondaryBtn}>Clear</button>
+            {onHistory && (
+              <button onClick={onHistory} style={secondaryBtn}><History size={16} /> Restore previous</button>
             )}
             <button
               onClick={generatePDF}

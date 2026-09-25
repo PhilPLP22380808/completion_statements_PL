@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, FileDown, Building2 } from 'lucide-react';
+import { ArrowLeft, History, FileDown, Building2 } from 'lucide-react';
 import { colors, inputStyle } from '../theme';
 import { TextInput, DateInput, Field, SectionCard } from '../components/fields';
 import StatementForm from '../components/StatementForm';
@@ -26,7 +26,7 @@ function loadState(matterType) {
   return newStatement(matterType);
 }
 
-export default function StatementBuilder({ matterType, onHome }) {
+export default function StatementBuilder({ matterType, onHome, onHistory }) {
   const [state, setState] = useState(() => loadState(matterType));
 
   useEffect(() => {
@@ -65,6 +65,7 @@ export default function StatementBuilder({ matterType, onHome }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button onClick={onHome} style={btnGhost}><ArrowLeft size={16} /> Change task</button>
             <button onClick={resetAll} style={btnGhost}>Clear</button>
+            <button onClick={onHistory} style={btnGhost}><History size={16} /> Restore previous</button>
             <button onClick={exportPdf} style={btnPrimary}><FileDown size={18} /> Export PDF</button>
           </div>
         </div>
