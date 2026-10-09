@@ -6,8 +6,8 @@ import { round2, parseMoney, formatMonthYear } from './format';
 import { grossOf, summariseApportionments } from './calc';
 import { FIXED_FEE_NET } from '../theme';
 
-const isSdlt = (label) => /stamp duty land tax|^sdlt/i.test(label || '');
-const isEstateAgent = (label) => /estate agent/i.test(label || '');
+export const isSdlt = (label) => /stamp duty|^sdlt/i.test(label || '');
+export const isEstateAgent = (label) => /estate agent/i.test(label || '');
 
 // The effective net amount for a line. An estate agent commission line entered
 // as a percentage is worked out from the sale price.

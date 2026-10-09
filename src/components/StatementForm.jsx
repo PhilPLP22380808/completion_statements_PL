@@ -3,12 +3,10 @@ import { PoundSterling, Receipt, Wallet, CalendarDays, Scale, Building2, AlertTr
 import { colors, inputStyle } from '../theme';
 import { TextInput, MoneyInput, Checkbox, DeleteButton, AddButton, Field, SectionCard, Datalist } from './fields';
 import ChargesEditor from './ChargesEditor';
-import { newLine, effectiveNet } from '../lib/statement';
+import { newLine, effectiveNet, isSdlt, isEstateAgent } from '../lib/statement';
 import { purchaseCostItems, purchaseFunds, saleCostItems, saleReceipts, ALLOWANCE_DESCRIPTIONS, SDLT_RATE_OPTIONS } from '../lib/catalog';
 import { formatCurrency } from '../lib/format';
 
-const isSdlt = (label) => /stamp duty land tax|^sdlt/i.test(label || '');
-const isEstateAgent = (label) => /estate agent/i.test(label || '');
 const looksLikeContents = (label) => /content|fixture|fitting|chattel/i.test(label || '');
 
 // All the money sections for one statement. `state` is a statement object,
@@ -105,7 +103,7 @@ export default function StatementForm({ state, onChange, completionDate }) {
       <ItemSection
         icon={Building2}
         title="Costs"
-        listId="costs-list"
+        listId={`costs-list-${state.matterType}`}
         lines={state.otherCosts || []}
         list={otherCosts}
         catalog={costsCatalog}
@@ -118,7 +116,7 @@ export default function StatementForm({ state, onChange, completionDate }) {
       <ItemSection
         icon={Wallet}
         title="Receipts"
-        listId="receipts-list"
+        listId={`receipts-list-${state.matterType}`}
         lines={state.funds || []}
         list={funds}
         catalog={fundsCatalog}
